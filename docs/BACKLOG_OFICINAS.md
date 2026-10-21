@@ -1,6 +1,6 @@
 # Backlog de implementação — 15 oficinas
 
-**F2.0a e F2.0b autorizadas e implementadas em branches/PRs próprias.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, conforme [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). OF04-01 e o corte aplicável de OF04-02 estão entregues em [F2_0B_ENTREGA.md](F2_0B_ENTREGA.md): cadastro e referências reais nos locais existentes; seletores em missões/lojas serão integrados quando seus editores existirem. As outras 39 tarefas seguem planejadas. As PRs #1/F0/F1 e #2/F2.0a e o Hub RPG permanecem preservados.
+**F2.0a, F2.0b e F2.1 autorizadas e implementadas em branches/PRs próprias.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, conforme [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). OF04-01 e o corte aplicável de OF04-02 estão entregues em [F2_0B_ENTREGA.md](F2_0B_ENTREGA.md): cadastro e referências reais nos locais existentes; seletores em missões/lojas serão integrados quando seus editores existirem. OF02-01/02 estão entregues em [F2_1_ENTREGA.md](F2_1_ENTREGA.md): editor de itens independente de ofertas, valores privados e cópia do conteúdo revelado. As outras 37 tarefas seguem planejadas. As PRs #1/F0/F1, #2/F2.0a e #3/F2.0b e o Hub RPG permanecem preservados.
 
 Fonte integral: `Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`, especificação incorporada v1.0 de 21/10/2026. [Matriz, contratos e arquitetura](OFICINA_GERAL_PLANO.md).
 
@@ -41,6 +41,8 @@ Uma tarefa de infraestrutura só entra junto a um uso real na interface. Uma ofi
 | OF04-02 | Referências de NPC por ID em domínios implementados | Seletor do mesmo NPC em missão/loja; prévia mostra só referência autorizada | Sem duplicar cadastro, chatbot ou resposta automática; arquivar não quebra histórico | Vincular um NPC em dois contextos; editar cadastro, preservar versões e impedir vazamento por autocomplete | OF04-01; validar vínculos quando cada editor existir |
 
 ## F2.1 — OF-02: Itens completos, independentes de ofertas
+
+**Entregue.** Cadastro rápido/avançado, efeitos múltiplos ordenáveis e valores privados, imagem opcional/corte, versões, público, prévia e artigos revelados. A cópia pública inclui somente nome/descrição autorizados; comprovantes de aquisição e associação a lojas/recompensas continuam nas fases correspondentes. Não há compra, posse nem preço por oferta neste cadastro.
 
 | ID | Entidades | Editor + projeção do jogador | Regra / aceite específico | Teste de fluxo além de C1–C8 | Dependência |
 | --- | --- | --- | --- | --- | --- |
@@ -119,4 +121,4 @@ Este é o núcleo de prioridade narrativa. Os cortes permitem PRs menores, mas o
 - **Portão F4:** cinco editores, revelação/filas, sorteio transacional justo conforme configuração, correspondência com privacidade de rascunho e entrega manual, jornal global.
 - **Portão F5:** autoria de anuários/retrospectivas e contribuição coletiva sem vazamento, continuidade anual, biblioteca/template e operações de dados verificáveis.
 
-**F2.0a e F2.0b foram autorizadas e entregues. A próxima fase F2.1 — Itens ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
+**F2.0a, F2.0b e F2.1 foram autorizadas e entregues. A próxima fase F2.2a — Missões e Histórias Individuais ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.

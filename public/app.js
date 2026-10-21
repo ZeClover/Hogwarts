@@ -1,5 +1,6 @@
 import { createWorkshop } from '/workshop.js';
 import { createNPCOffice } from '/npcs.js';
+import { createItemOffice } from '/items.js';
 const root = document.querySelector('#root');
 const state = { session: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 let toastTimer;
@@ -28,6 +29,8 @@ const workshop=createWorkshop({api,esc,ico,label,empty,button,state,render,navig
 workshop.attach(root);
 const npcOffice=createNPCOffice({api,esc,ico,label,empty,button,state,render,navigate,toast});
 npcOffice.attach(root);
+const itemOffice=createItemOffice({api,esc,ico,label,empty,button,state,render,navigate,toast});
+itemOffice.attach(root);
 function toast(message, error=false) {
   clearTimeout(toastTimer);
   const el=document.querySelector('#toast');el.textContent=message;el.className=error?'visible error':'visible';
@@ -55,6 +58,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  if(itemOffice.handles(state.page)){await itemOffice.load();return;}
   if(npcOffice.handles(state.page)){await npcOffice.load();return;}
   if(workshop.handles(state.page)){await workshop.load();return;}
   if(state.page==='/portal/mestre' && state.session?.role==='MASTER' && !state.view) state.admin=await api('/api/master/state',{preview:false});
@@ -65,6 +69,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
+  if(!force&&!changed&&!state.dirty&&itemOffice.handles(state.page)){await itemOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&npcOffice.handles(state.page)){await npcOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&workshop.handles(state.page)){await workshop.poll();return;}
   if(!force&&!changed&&!state.dirty&&state.page.startsWith('/portal/local/')){const detail=await api('/api/locations/'+state.page.split('/').pop());if(JSON.stringify(detail)!==JSON.stringify(state.detail)){state.detail=detail;render();}return;}
@@ -95,7 +100,7 @@ function school() {
   return `${label('VIDA ESCOLAR')}<h1 class="display">O Castelo de Hogwarts</h1><div class="tiles">${library?imgcard('Biblioteca','Acervo da escola',library.image,'/portal/local/'+library.id,'book'):''}${imgcard('Calendário','Aulas e eventos','/assets/hogwarts_saguão.webp','/portal/calendario','clock')}${imgcard('As Quatro Casas','Tradição e pertencimento','/assets/hogwarts_claustro.webp','/portal/casas','shield')}${imgcard('Quadros de Avisos','Comunicados','/assets/hogwarts_corredor_velas.webp','/portal/avisos','scroll')}</div>`;
 }
 function archives() {
-  return `${label('ARQUIVOS PESSOAIS')}<h1 class="display">Meus Acervos</h1><div class="group">${button('Galeria de Imagens','/portal/midias','book')}${button('Pessoas conhecidas','/portal/personagens','user')}</div><div class="tiles">${imgcard('Coleções','Descobertas e registros','/assets/biblioteca_hogwarts.webp','/portal/colecoes','star')}${imgcard('Diário de Missões','Histórias em andamento','/assets/hogwarts_escadarias.webp','/portal/missoes','scroll')}${imgcard('Investigações','Caderno coletivo','/assets/hogwarts_saguão.webp','/portal/investigacoes','book')}${imgcard('Recordações','Memórias e momentos','/assets/correio_pergaminhos.webp','/portal/recordacoes','quill')}</div>`;
+  return `${label('ARQUIVOS PESSOAIS')}<h1 class="display">Meus Acervos</h1><div class="group">${button('Galeria de Imagens','/portal/midias','book')}${button('Pessoas conhecidas','/portal/personagens','user')}${button('Artigos revelados','/portal/artigos','book')}</div><div class="tiles">${imgcard('Coleções','Descobertas e registros','/assets/biblioteca_hogwarts.webp','/portal/colecoes','star')}${imgcard('Diário de Missões','Histórias em andamento','/assets/hogwarts_escadarias.webp','/portal/missoes','scroll')}${imgcard('Investigações','Caderno coletivo','/assets/hogwarts_saguão.webp','/portal/investigacoes','book')}${imgcard('Recordações','Memórias e momentos','/assets/correio_pergaminhos.webp','/portal/recordacoes','quill')}</div>`;
 }
 function mast(image, kicker, title) {
   return `<section class="media-mast" style="--media:url('${image}')"><div><span class="eyebrow">${esc(kicker)}</span><h1>${esc(title)}</h1></div></section>`;
@@ -155,6 +160,7 @@ function auditLabel(action) {
   return ({BOOTSTRAP_INVITE:'Convite inicial criado',INVITE_ACCEPTED:'Convite aceito',INVITE_CREATED:'Convite criado',INVITE_REVOKED:'Convite revogado',REGION_ACCESS_UPDATED:'Acesso de região atualizado',LOCATION_ACCESS_UPDATED:'Visibilidade de local atualizada',SECRET_LOCATION_CREATED:'Local secreto criado',GROUP_UPDATED:'Grupo atualizado',CHARACTER_UPDATED:'Personagem atualizado',PROFILE_UPDATED:'Biografia atualizada',PHOTO_UPDATED:'Foto atualizada',PHOTO_REMOVED:'Foto removida',ACCOUNT_DISABLED:'Conta suspensa',ACCOUNT_ENABLED:'Conta reativada'})[action]??action;
 }
 function pageContent() {
+  if(itemOffice.handles(state.page))return itemOffice.page();
   if(npcOffice.handles(state.page))return npcOffice.page();
   if(workshop.handles(state.page))return workshop.page();
   const page=state.page.split('/')[2]??'inicio';
@@ -200,7 +206,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"]'))state.dirty=true;});
+root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}
