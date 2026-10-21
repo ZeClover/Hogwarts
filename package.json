@@ -19,6 +19,8 @@
     "backup": "node --env-file-if-exists=.env --experimental-strip-types src/cli.ts backup"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "pdf-lib": "^1.17.1",
     "sharp": "^0.35.5"
   },
   "devDependencies": {

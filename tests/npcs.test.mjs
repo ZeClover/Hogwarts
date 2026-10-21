@@ -1,3 +1,4 @@
+import {readdirSync} from 'node:fs';
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -23,7 +24,7 @@ before(async()=>{f=await fixture();});after(async()=>{await f?.close();});
 test('migração NPC é aditiva, não cria conteúdo canônico nem altera os cinco protagonistas',()=>{
   assert.equal(f.db.prepare('SELECT count(*) n FROM npcs').get().n,0);
   assert.equal(f.db.prepare('SELECT count(*) n FROM characters').get().n,5);
-  assert.equal(f.db.prepare('SELECT count(*) n FROM schema_migrations').get().n,6);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM schema_migrations').get().n,readdirSync('migrations').filter(p=>p.endsWith('.sql')).length);
   assert.deepEqual(f.db.prepare('PRAGMA foreign_key_check').all(),[]);
 });
 test('editores, referências, histórico e prévia exigem Mestre; mutações exigem CSRF e ator real',async()=>{
