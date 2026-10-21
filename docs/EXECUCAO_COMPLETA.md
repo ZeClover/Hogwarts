@@ -7,8 +7,8 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F0/F1, F2.0a, F2.0b, F2.1, F2.2a | Entregues, PRs #1–#5 preservadas |
 | F2.2b — condução, pistas e fila | Entregue, PR #6 |
 | F2.2c — certificados e concessões | Entregue, PR #7 |
-| F2.3 — lojas/ofertas/mapas | Em implementação |
-| F2.4 — carteira, pedidos e recibos | Autorizada |
+| F2.3 — lojas/ofertas/mapas | Entregue, PR #8 |
+| F2.4 — carteira, pedidos e recibos | Em implementação |
 | F3.0 — livros/aulas | Autorizada |
 | F3.1 — anos, calendário e grade | Autorizada |
 | F3.2 — murais/propostas | Autorizada |
