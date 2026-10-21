@@ -36,7 +36,7 @@ async function storeImage(db:DB,config:Config,actor:Session,bytes:Buffer,source:
   }catch(error){await unlink(path).catch(()=>{});throw error;}
   return fileDTO(one(db,'SELECT * FROM workshop_files WHERE id=?',id)!);
 }
-async function renderImage(db:DB,config:Config,res:ServerResponse,payload:MediaPayload,thumb:boolean){
+export async function renderImage(db:DB,config:Config,res:ServerResponse,payload:Pick<MediaPayload,'fileId'|'crop'>,thumb:boolean){
   const file=one(db,'SELECT * FROM workshop_files WHERE id=?',payload.fileId)??fail(404,'Imagem indisponível.');
   const width=Number(file.width),height=Number(file.height),crop=payload.crop;
   const left=Math.min(width-1,Math.floor(width*crop.x/100)),top=Math.min(height-1,Math.floor(height*crop.y/100));

@@ -12,6 +12,7 @@ import { portalState, locationVisible, locationDTO, characterDTO, mediaVisible, 
 
 import { bodyBuffer, jsonBody, send, text } from './http.ts';
 import { handleWorkshop } from './workshop.ts';
+import { handleNPCs, npcReferencesForLocation } from './npcs.ts';
 const imageFiles = new Set(['loja_tomos_pergaminhos.webp','loja_olivaras.webp','loja_dedosdemel.webp','loja_pocoes.webp',
   'biblioteca_hogwarts.webp','hogwarts_corredor_velas.webp','hogwarts_escadarias.webp','antiquario_ou_oficina.webp']);
 function known(db: DB, table: 'characters' | 'access_groups' | 'regions' | 'locations', id: string): Row {
@@ -125,6 +126,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
         const actor = requireSession(session);
         return send(res,200,{role:actor.role,csrf:actor.csrf,characterId:actor.characterId});
       }
+      if (await handleNPCs(req,res,url,db,config,session)) return;
       if (await handleWorkshop(req,res,url,db,config,session)) return;
       if (path.startsWith('/api/master/')) {
         const actor = requireMaster(session);
@@ -282,7 +284,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
       if(location && method==='GET'){
         const viewer=viewerFor(db,requireSession(session),url), record=one(db,'SELECT * FROM locations WHERE id=?',location[1]!);
         if(!record || !locationVisible(db,viewer,record)) fail(404,'Local não encontrado.');
-        return send(res,200,{...locationDTO(record),items:[]});
+        return send(res,200,{...locationDTO(record),items:[],contacts:npcReferencesForLocation(db,viewer,String(record.id))});
       }
       const publication=path.match(/^\/api\/publications\/([a-zA-Z0-9-]+)$/);
       if(publication && method==='GET'){
@@ -296,7 +298,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
       const staticFile=path.match(/^\/assets\/([^/]+\.webp)$/);
       let filename:string, mime:string;
       if(staticFile){filename=join(config.publicDir,'assets',basename(decodeURIComponent(staticFile[1]!)));mime='image/webp';res.setHeader('Cache-Control','public, max-age=3600');}
-      else if(['/style.css','/app.js','/workshop.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
+      else if(['/style.css','/app.js','/workshop.js','/npcs.js','/editorial-ui.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
       else if(path==='/'||path==='/ativar'||path==='/entrar'||/^\/portal(?:\/[a-zA-Z0-9-]+)*$/.test(path)){filename=join(config.publicDir,'index.html');mime='text/html; charset=utf-8';}
       else fail(404,'Página não encontrada.');
       const bytes=await readFile(filename).catch(()=>fail(404,'Arquivo não encontrado.'));

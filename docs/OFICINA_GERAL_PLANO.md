@@ -1,17 +1,17 @@
 # Oficina Geral do Mestre — análise e plano de evolução
 
-Status atualizado nesta branch: **F2.0a autorizada e implementada**, com [registro de entrega e limites](F2_0A_ENTREGA.md). Demais oficinas/fases permanecem planejadas. A PR #1/F0/F1 continua em `25db4a80e1ced6e904f9072dee72d81904998672`; a branch documental original preserva o plano e esta branch de implementação acrescenta a próxima fase sem alterar a PR #1.
+Status atualizado nesta branch: **F2.0a e F2.0b autorizadas e implementadas**, com [entrega de mídia](F2_0A_ENTREGA.md) e [entrega de NPCs](F2_0B_ENTREGA.md). Demais oficinas/fases permanecem planejadas. As PRs #1/F0/F1 e #2/F2.0a e a branch documental original permanecem preservadas; esta branch acrescenta somente a fase de NPCs.
 
 ## Fontes e limite da análise
 
 Foram comparados o código F0/F1 em `25db4a80e1ced6e904f9072dee72d81904998672`, a migração inicial, as APIs reais, os testes, os anexos V4 e o arquivo **`Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`**, lido integralmente (399 linhas), incluindo sua especificação incorporada, versão 1.0 de 21/10/2026.
 
-O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou a próxima fase, F2.0a, nesta sessão; fundação/PR/Hub/V4 seguem preservados e as etapas posteriores continuam exigindo nova autorização.
+O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou separadamente F2.0a e depois F2.0b nesta sessão; fundação/PR/Hub/V4 seguem preservados e as etapas posteriores continuam exigindo nova autorização.
 A regra principal passa a ser: uma seção de conteúdo só está completa quando o Mestre consegue criar, editar, publicar/revelar e arquivar seu conteúdo no site, com persistência, destinatários, proteção de campos e fluxo verificado até o jogador. Uma tela de consulta ou uma tabela vazia não satisfaz isso.
 
 ## Matriz: editor existente / ausente / dependências / fase — baseline F0/F1
 
-Esta matriz registra o inventário da F0/F1 no commit de referência. O avanço posterior da F2.0a está detalhado em [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). “Existente” significa uma operação implementada e persistida pelo servidor. “Parcial” nunca equivale a oficina completa. As fases abaixo subdividem F2–F5 para revisão em PRs pequenos; não mudam a F0/F1 entregue.
+Esta matriz registra o inventário da F0/F1 no commit de referência. Os avanços posteriores estão detalhados nas entregas [F2.0a](F2_0A_ENTREGA.md) e [F2.0b](F2_0B_ENTREGA.md). “Existente” significa uma operação implementada e persistida pelo servidor. “Parcial” nunca equivale a oficina completa. As fases abaixo subdividem F2–F5 para revisão em PRs pequenos; não mudam a F0/F1 entregue.
 
 | Oficina | Editor existente hoje | Editor ausente / lacuna | Dependências | Fase proposta |
 | --- | --- | --- | --- | --- |
@@ -129,9 +129,9 @@ Para PDFs, começar com templates estruturados e personalizáveis com texto, cam
 
 | Fase / entrega | Fluxo administrativo real | Dependência / conclusão |
 | --- | --- | --- |
-| F0/F1 — preservada | Fundação, perfis, convites, Casas, grupos, regiões/locais e prévia | PR #1 preservada; Oficina Geral separada ainda não existe e será uma entrega autorizada futura |
+| F0/F1 — preservada | Fundação, perfis, convites, Casas, grupos, regiões/locais e prévia | PR #1 preservada; Oficina Geral foi acrescentada nas entregas F2.0a/F2.0b sem alterar essa branch original |
 | F2.0a — Oficina Geral, mídia e contrato editorial | Entrada administrativa unificada, biblioteca de imagens aprovadas, upload, vínculo e versão; padrão de rascunho/publicação/destinatários testado em um recurso real | Entregue nesta branch para mídia; demais oficinas continuam pendentes |
-| F2.0b — NPCs reutilizáveis | Criar/editar NPC, campos públicos/segredos, publicar/liberar/arquivar e consulta autorizada | Reusa F2.0a; sem respostas automáticas |
+| F2.0b — NPCs reutilizáveis | Criar/editar NPC, campos públicos/segredos, publicar/liberar/arquivar e consulta autorizada | Entregue: reusa F2.0a, vínculos nos locais atuais e revelação separada; sem respostas automáticas. Integrações nos futuros editores continuam pendentes |
 | F2.1 — Itens | Editor rápido/avançado, segredos, estimativa/preço privados, duplicação e arquivo; sem associação automática | Prepara recompensas e ofertas, sem criar comércio |
 | F2.2a — Missões: autoria e participantes | Side-quest e história individual, publicação separada de início, participantes e dois Diários | NPCs, locais, núcleo; editor usável persistente, com arcos pessoais/capítulos separados |
 | F2.2b — Missões: condução e resultado | Objetivos manuais, pistas por destinatário, condições verificadas pelo Mestre, andamento e três resultados | Não declarar Oficina de Missões completa sem este corte e o seguinte |
@@ -173,7 +173,7 @@ A especificação já resolve estes pontos: rascunho do Correio é do autor; an�
 
 Decisões de implementação a resolver somente na fase correspondente: tratamento de novos participantes sem revelar capítulos retroativamente; layout/campos editáveis de cada template; revogação controlada de um PDF já emitido; origem do pacote e regras de duplicatas; confirmar se venda direta do Mestre integra a F2.4. Nenhuma depende de escrever previamente conteúdo, números de missões, estoques ou cartas reais.
 
-**Próximo código: aguardar autorização do usuário para F2.0b (NPCs).** A F2.0a foi entregue; seguem Itens e os três cortes de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. Nenhuma fase será iniciada automaticamente ao concluir este plano.
+**Próximo código: aguardar autorização do usuário para F2.1 (Itens).** A F2.0a e a F2.0b foram entregues; seguem Itens e os três cortes de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. Nenhuma fase será iniciada automaticamente ao concluir este plano.
 
 ## Complementos da leitura integral — requisitos vinculantes
 

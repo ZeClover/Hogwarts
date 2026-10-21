@@ -1,6 +1,6 @@
 # Backlog de implementação — 15 oficinas
 
-**F2.0a autorizada e implementada nesta branch; demais fases não iniciadas.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, com os limites detalhados em [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). As outras 41 tarefas seguem planejadas. A PR #1/F0/F1 e o Hub RPG permanecem preservados.
+**F2.0a e F2.0b autorizadas e implementadas em branches/PRs próprias.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, conforme [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). OF04-01 e o corte aplicável de OF04-02 estão entregues em [F2_0B_ENTREGA.md](F2_0B_ENTREGA.md): cadastro e referências reais nos locais existentes; seletores em missões/lojas serão integrados quando seus editores existirem. As outras 39 tarefas seguem planejadas. As PRs #1/F0/F1 e #2/F2.0a e o Hub RPG permanecem preservados.
 
 Fonte integral: `Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`, especificação incorporada v1.0 de 21/10/2026. [Matriz, contratos e arquitetura](OFICINA_GERAL_PLANO.md).
 
@@ -32,6 +32,8 @@ Uma tarefa de infraestrutura só entra junto a um uso real na interface. Uma ofi
 | OF14-02 | Viewer/ator real e registro de ação por domínio; testes de regressão | Prévia Mestre/Personagem nos editores; perfil continua com bio/foto imediatas | Não usar MASTER como bypass para rascunho alheio; preservar permissões existentes e lotes auditáveis | Comparar banco antes/depois de prévias de quatro Casas; nenhuma mutação; foto/bio próprias continuam funcionando | OF14-01 |
 
 ## F2.0b — OF-04: NPCs reutilizáveis
+
+**Entregue no escopo atual.** Editor completo de NPC, perfis autorizados, fragmentos e revelações por personagem. OF04-02 usa um ID nos múltiplos locais já existentes e endpoints de referências protegidos; não antecipa editores de missão/loja nem declara concluídas essas integrações futuras.
 
 | ID | Entidades | Editor + projeção do jogador | Regra / aceite específico | Teste de fluxo além de C1–C8 | Dependência |
 | --- | --- | --- | --- | --- | --- |
@@ -117,4 +119,4 @@ Este é o núcleo de prioridade narrativa. Os cortes permitem PRs menores, mas o
 - **Portão F4:** cinco editores, revelação/filas, sorteio transacional justo conforme configuração, correspondência com privacidade de rascunho e entrega manual, jornal global.
 - **Portão F5:** autoria de anuários/retrospectivas e contribuição coletiva sem vazamento, continuidade anual, biblioteca/template e operações de dados verificáveis.
 
-**F2.0a foi selecionada e entregue. A próxima fase F2.0b ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
+**F2.0a e F2.0b foram autorizadas e entregues. A próxima fase F2.1 — Itens ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
