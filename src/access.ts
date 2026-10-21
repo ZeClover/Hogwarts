@@ -1,3 +1,4 @@
+import {calendarHeader} from './calendar-model.ts';
 import type { DB, Row } from './db.ts';
 import { all, one } from './db.ts';
 import type { Viewer } from './auth.ts';
@@ -49,7 +50,7 @@ export function mediaVisible(db: DB, viewer: Viewer, media: Row) {
 export function portalState(db: DB, viewer: Viewer) {
   const regions = all(db,'SELECT * FROM regions').filter(r=>r.id==='hogwarts'||r.id==='hogsmeade'||regionVisible(db,viewer,r)).map(r=>({ id:r.id, title:r.title, accessible:regionVisible(db,viewer,r) }));
   return {
-    role: viewer.role, preview: viewer.preview,
+    role: viewer.role, preview: viewer.preview, calendar:calendarHeader(db),
     character: viewer.characterId ? characterDTO(db,viewer.characterId) : null,
     regions,
     locations: all(db,'SELECT * FROM locations').filter(r=>locationVisible(db,viewer,r)).map(locationDTO),

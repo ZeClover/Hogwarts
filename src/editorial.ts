@@ -1,3 +1,4 @@
+import {knownAcademicYear} from './calendar-model.ts';
 import { randomUUID } from 'node:crypto';
 import type { DB, Row } from './db.ts';
 import { one, all, audit, transaction } from './db.ts';
@@ -52,9 +53,9 @@ export function validatePayload(db: DB, value: unknown): MediaPayload {
   const x=coordinate(crop.x,0),y=coordinate(crop.y,0),width=coordinate(crop.width,0.1),height=coordinate(crop.height,0.1);
   if(x+width>100||y+height>100)fail(400,'O corte ultrapassa a imagem.');
   if(!categories.includes(String(data.category))||!presentations.includes(String(data.presentation)))fail(400,'Categoria ou apresentação inválida.');
-  if(data.academicYear!=='1890–1891')fail(400,'Selecione o ano letivo disponível.');
+  if(!knownAcademicYear(db,data.academicYear))fail(400,'Selecione o ano letivo disponível.');
   return {title:text(data.title,120),description:text(data.description,3000,false),alt:text(data.alt,300,false),credit:text(data.credit,300,false),
-    category:String(data.category),presentation:String(data.presentation),academicYear:data.academicYear,fileId,crop:{x,y,width,height}};
+    category:String(data.category),presentation:String(data.presentation),academicYear:String(data.academicYear),fileId,crop:{x,y,width,height}};
 }
 export function entry(db: DB,id:string): Row {
   return one(db,'SELECT * FROM editorial_entries WHERE id=?',id)??fail(404,'Registro não encontrado.');
