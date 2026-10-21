@@ -64,6 +64,10 @@ export function projectNPC(db:DB,viewer:Viewer,row:Row,draft=false,portraitURL?:
     portrait:payload.portraitFileId?(portraitURL??`/api/workshop/npcs/${row.id}/portrait?stamp=${imageStamp(row)}`):null,
     portraitAlt:payload.portraitFileId?payload.portraitAlt:''};
 }
+export function npcReference(db:DB,viewer:Viewer,id:string){
+  const row=one(db,'SELECT * FROM npcs WHERE id=?',id);if(!row||!canRead(db,viewer,row))return null;
+  const p=dataOf(row,true);return {id:row.id,name:p.name,role:p.role};
+}
 export function npcReferencesForLocation(db:DB,viewer:Viewer,locationId:string){
   const location=one(db,'SELECT * FROM locations WHERE id=?',locationId);
   if(!location||!locationVisible(db,viewer,location))return [];
