@@ -1,6 +1,7 @@
 import { createWorkshop } from '/workshop.js';
 import { createNPCOffice } from '/npcs.js';
 import { createItemOffice } from '/items.js';
+import { createCampaignOffice } from '/campaign.js';
 const root = document.querySelector('#root');
 const state = { session: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 let toastTimer;
@@ -31,6 +32,8 @@ const npcOffice=createNPCOffice({api,esc,ico,label,empty,button,state,render,nav
 npcOffice.attach(root);
 const itemOffice=createItemOffice({api,esc,ico,label,empty,button,state,render,navigate,toast});
 itemOffice.attach(root);
+const campaignOffice=createCampaignOffice({api,esc,ico,label,empty,button,state,render,navigate,toast});
+campaignOffice.attach(root);
 function toast(message, error=false) {
   clearTimeout(toastTimer);
   const el=document.querySelector('#toast');el.textContent=message;el.className=error?'visible error':'visible';
@@ -58,6 +61,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  if(campaignOffice.handles(state.page)){await campaignOffice.load();return;}
   if(itemOffice.handles(state.page)){await itemOffice.load();return;}
   if(npcOffice.handles(state.page)){await npcOffice.load();return;}
   if(workshop.handles(state.page)){await workshop.load();return;}
@@ -69,6 +73,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
+  if(!force&&!changed&&!state.dirty&&campaignOffice.handles(state.page)){await campaignOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&itemOffice.handles(state.page)){await itemOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&npcOffice.handles(state.page)){await npcOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&workshop.handles(state.page)){await workshop.poll();return;}
@@ -122,7 +127,6 @@ const futurePages={
  calendario:['/assets/hogwarts_saguão.webp','VIDA ESCOLAR','Calendário Escolar','Nenhum evento publicado.'],
  avisos:['/assets/hogwarts_corredor_velas.webp','HOGWARTS','Quadros de Avisos','Nenhum comunicado publicado.'],
  colecoes:['/assets/biblioteca_hogwarts.webp','MEUS ACERVOS','Coleções','Nenhuma coleção revelada.'],
- missoes:['/assets/hogwarts_escadarias.webp','MEUS REGISTROS','Diário de Missões','Nenhuma missão publicada.'],
  investigacoes:['/assets/hogwarts_saguão.webp','MEUS REGISTROS','Investigações','Nenhuma investigação revelada.'],
  recordacoes:['/assets/correio_pergaminhos.webp','MEUS ACERVOS','Recordações','Ainda não há recordações registradas.'],
  profeta:['/assets/correio_pergaminhos.webp','MUNDO BRUXO','O Profeta Diário','Nenhuma edição publicada.']
@@ -160,6 +164,7 @@ function auditLabel(action) {
   return ({BOOTSTRAP_INVITE:'Convite inicial criado',INVITE_ACCEPTED:'Convite aceito',INVITE_CREATED:'Convite criado',INVITE_REVOKED:'Convite revogado',REGION_ACCESS_UPDATED:'Acesso de região atualizado',LOCATION_ACCESS_UPDATED:'Visibilidade de local atualizada',SECRET_LOCATION_CREATED:'Local secreto criado',GROUP_UPDATED:'Grupo atualizado',CHARACTER_UPDATED:'Personagem atualizado',PROFILE_UPDATED:'Biografia atualizada',PHOTO_UPDATED:'Foto atualizada',PHOTO_REMOVED:'Foto removida',ACCOUNT_DISABLED:'Conta suspensa',ACCOUNT_ENABLED:'Conta reativada'})[action]??action;
 }
 function pageContent() {
+  if(campaignOffice.handles(state.page))return campaignOffice.page();
   if(itemOffice.handles(state.page))return itemOffice.page();
   if(npcOffice.handles(state.page))return npcOffice.page();
   if(workshop.handles(state.page))return workshop.page();
@@ -206,7 +211,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"]'))state.dirty=true;});
+root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}
