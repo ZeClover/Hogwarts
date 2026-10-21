@@ -1,3 +1,4 @@
+import {contentAllowed} from './content.ts';
 import {knownAcademicYear} from './calendar-model.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -16,7 +17,7 @@ type Payload={title:string;summary:string;kind:string;academicYear:string;fileId
 type Internal={synopsis:string;importance:string;releaseConditions:string;notes:string};
 type Entry={id:string;kind:string;title:string;text:string;npcId:string|null;locationId:string|null;fileId:string|null;alt:string};
 type Objective={id:string;title:string;description:string;optional:boolean;internalOnly:boolean;policy:Policy};
-type Clue=Entry&{policy:Policy};
+type Clue=Entry&{policy:Policy;collectionId?:string|null};
 type Published=Payload&{entries?:Entry[];objectives?:Objective[];clues?:Clue[]};
 const definitions=(db:DB,id:string,kind:'objectives'|'clues')=>all(db,`SELECT * FROM quest_${kind} WHERE quest_id=? ORDER BY position,id`,id);
 const preparedDefinitions=(db:DB,id:string,kind:'objectives'|'clues')=>definitions(db,id,kind).map(r=>({id:String(r.id),...JSON.parse(String(r.draft_json))}));
@@ -251,7 +252,7 @@ function publicOperations(db:DB,viewer:Viewer,row:Row){
   });
   const clues=all(db,'SELECT clue_id FROM quest_clue_reveals WHERE quest_id=? AND character_id=? AND active=1 ORDER BY clue_id',String(row.id),viewer.characterId!).flatMap(r=>{
     const known=clueRecord(db,viewer,row,String(r.clue_id));if(!known)return [];const c=known.saved;
-    return [{id:c.id,title:c.title,text:c.text,...links(db,viewer,c),alt:c.fileId?c.alt:'',image:c.fileId?`/api/campaign/quests/${row.id}/clues/${c.id}/image?stamp=${digest(String(known.row.snapshot_json)).slice(0,20)}`:null}];
+    return [{id:c.id,title:c.title,text:c.text,collection:knownCollectionReference(db,viewer,c.collectionId??null),...links(db,viewer,c),alt:c.fileId?c.alt:'',image:c.fileId?`/api/campaign/quests/${row.id}/clues/${c.id}/image?stamp=${digest(String(known.row.snapshot_json)).slice(0,20)}`:null}];
   });
   const outcomes=all(db,'SELECT * FROM quest_outcomes WHERE quest_id=? ORDER BY version,id',String(row.id)).filter(r=>(JSON.parse(String(r.characters_json)) as string[]).includes(viewer.characterId!)).map(r=>({id:r.id,...JSON.parse(String(r.public_json)) as {result:string;epilogue:string;date:string}}));
   const order=(kind:'objectives'|'clues',id:unknown)=>{const index=(payload(row,true)[kind]??[]).findIndex(e=>e.id===id);return index<0?1_000_000:index;};
@@ -276,7 +277,7 @@ function saveDefinition(db:DB,actor:Session,id:string,kind:'objectives'|'clues',
           fields(p,['title','description','optional','internalOnly','policy']);if(typeof p.optional!=='boolean'||typeof p.internalOnly!=='boolean')fail(400,'Confira as opções do objetivo.');
           content={title:text(p.title,120),description:text(p.description,2000,false),optional:p.optional,internalOnly:p.internalOnly,policy:validatePolicy(db,p.policy)};
         }else{
-          fields(p,['title','text','fileId','alt','npcId','locationId','policy']);content={kind:'REVELATION',title:text(p.title,120),text:text(p.text,4000),fileId:optional(db,p.fileId,'workshop_files'),alt:text(p.alt,300,false),npcId:optional(db,p.npcId,'npcs'),locationId:optional(db,p.locationId,'locations'),policy:validatePolicy(db,p.policy)};
+          fields(p,['title','text','fileId','alt','npcId','locationId','policy','collectionId']);const collectionId=p.collectionId==null?null:text(p.collectionId,100);if(collectionId&&!one(db,"SELECT id FROM content_records WHERE id=? AND kind IN('chocolatecards','bestiary','rarities','memories','curiosities')",collectionId))fail(400,'Coleção indisponível.');content={collectionId,kind:'REVELATION',title:text(p.title,120),text:text(p.text,4000),fileId:optional(db,p.fileId,'workshop_files'),alt:text(p.alt,300,false),npcId:optional(db,p.npcId,'npcs'),locationId:optional(db,p.locationId,'locations'),policy:validatePolicy(db,p.policy)};
         }
         const notes=text(data.privateNotes??'',2000,false);if(!old&&rows.length>=50)fail(400,'Use até 50 registros de cada tipo por missão.');
         if(old)db.prepare(`UPDATE quest_${kind} SET draft_json=?,private_notes=? WHERE quest_id=? AND id=?`).run(JSON.stringify(content),notes,id,definitionId);
@@ -347,7 +348,7 @@ export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:
   if(admin){
     const actor=requireMaster(session);if(url.searchParams.has('view_as'))fail(403,'Saia da visualização para administrar.');
     if(path==='/api/master/campaign/context'&&method==='GET'){
-      send(res,200,{npcs:all(db,'SELECT id,status,draft_json FROM npcs ORDER BY id').map(r=>({id:r.id,status:r.status,name:JSON.parse(String(r.draft_json)).name}))});return true;
+      send(res,200,{collections:all(db,"SELECT id,draft_json FROM content_records WHERE kind IN('chocolatecards','bestiary','rarities','memories','curiosities')").map(r=>({id:r.id,name:JSON.parse(String(r.draft_json)).title})),npcs:all(db,'SELECT id,status,draft_json FROM npcs ORDER BY id').map(r=>({id:r.id,status:r.status,name:JSON.parse(String(r.draft_json)).name}))});return true;
     }
     const match=path.match(/^\/api\/master\/campaign\/(quests|stories)(?:\/([\w-]+))?(?:\/(history|preview|preview-image|prepare|publish|duplicate|archive|restore|release|revoke|start|entries|reorder|reveal-entry|revoke-entry|objectives|clues|reorder-objectives|reorder-clues|objective-state|reveal-clue|revoke-clue|close|reopen))?$/);
     if(match){
@@ -417,3 +418,5 @@ export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:
 }
 
 export function campaignAnnouncementReference(db:DB,viewer:Viewer,id:string){const row=one(db,'SELECT * FROM quests WHERE id=?',id);if(!row||!canAnnounce(db,viewer,row))return null;return {id:row.id,title:payload(row,true).title};}
+
+function knownCollectionReference(db:DB,viewer:Viewer,id:string|null){if(!id)return null;const row=one(db,'SELECT * FROM content_records WHERE id=?',id);if(!row||!contentAllowed(db,viewer,row))return null;const known=one(db,'SELECT snapshot_json FROM collection_discoveries WHERE record_id=? AND character_id=? AND active=1',id,viewer.characterId);if(!known)return null;return {title:JSON.parse(String(known.snapshot_json)).title,href:'/portal/conteudos/'+row.kind+'/'+row.id};}
