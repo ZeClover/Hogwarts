@@ -1,12 +1,12 @@
 # Hogwarts 1890 — Arquivos Mágicos
 
-Portal privado para a campanha de 1890–1891. Fundação **F0/F1** e **F2.0a/F2.0b/F2.1 — Oficina Geral, Mídia, NPCs e Itens**, independentes do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
+Portal privado para a campanha de 1890–1891. Fundação **F0/F1** e **F2.0a–F2.2a — Oficina Geral, Mídia, NPCs, Itens e autoria narrativa**, independentes do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
 
 ## Oficina Geral — F2.0a
 
 O Mestre já pode criar, editar, preparar, publicar, duplicar e arquivar registros na **Oficina Geral → Biblioteca de Mídia**, com upload/seleção V4, corte, metadados, notas privadas, destinatários, turmas, prévia e histórico. Jogadores consultam somente imagens liberadas em **Acervos → Galeria de Imagens**. Rascunhos e revisões publicadas são independentes.
 
-[Entrega F2.0a: uso, rotas, migração, capturas, verificações e limites](docs/F2_0A_ENTREGA.md). A PR da fundação permanece preservada; esta fase tem sua própria branch/PR. As entregas seguintes de NPCs e Itens estão descritas abaixo; Lojas e Missões continuam planejadas.
+[Entrega F2.0a: uso, rotas, migração, capturas, verificações e limites](docs/F2_0A_ENTREGA.md). A PR da fundação permanece preservada; esta fase tem sua própria branch/PR. As entregas seguintes de NPCs, Itens e autoria narrativa estão descritas abaixo; condução de missões e Lojas continuam planejadas.
 
 ## NPCs — F2.0b
 
@@ -19,6 +19,14 @@ Em **Oficina Geral → NPCs**, o Mestre cria perfis com retrato opcional, papel,
 Em **Oficina Geral → Itens**, o Mestre cadastra objetos com nome/descrição revelada, imagem opcional e corte, categoria, qualidade, materiais, propriedades, efeitos ordenáveis, requisitos, usos/cargas, fabricação e segredos. Estimativa e preço escolhido são privados e independentes, informados em Galeões/Sicles/Nuques e armazenados em Nuques inteiros. Publicar libera só o artigo autorizado em **Acervos → Artigos revelados**, com cópia da descrição pública; não cria oferta, posse, compra ou recompensa.
 
 [Entrega F2.1: uso, rotas, migração, testes e limites](docs/F2_1_ENTREGA.md). As propriedades internas só são reveladas se o Mestre decidir incluí-las na descrição pública. Cada item mantém um ID reutilizável para as futuras ofertas e recompensas.
+
+## Missões e Histórias — F2.2a
+
+Em **Oficina Geral → Missões e Histórias**, o Mestre cria missões com resumo, capa opcional, NPC/local por ID, gancho e planejamento privado. Publicar prepara um anúncio em **Oportunidades**; liberar participantes adiciona a missão ao Diário como disponível; iniciar muda o andamento apenas dos selecionados. São comandos separados.
+
+**Histórias Individuais** têm arcos, protagonista e entradas próprias (capítulos, eventos e revelações). Publicar e liberar o arco não revela suas entradas. Cada revelação é explícita e preserva o texto autorizado; arquivar mantém a leitura histórica de quem tem acesso. O Diário possui duas seções distintas e aplica todas as permissões no servidor.
+
+[Entrega F2.2a: uso, rotas, segurança, migração, testes e limites](docs/F2_2A_ENTREGA.md). Este é o corte de autoria: objetivos, pistas de missão, desfechos, fila de revelações, certificados/PDFs e recompensas ainda pertencem às fases F2.2b/F2.2c. A Oficina de Missões integral ainda não está concluída.
 
 ## O que está pronto
 
@@ -138,8 +146,8 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 ## Limitações e próximas fases
 
 - O mapa restaurado de Hogsmeade é **provisório**. O Mestre deve aprovar a qualidade/posições ou fornecer uma captura limpa fiel ao jogo. Há aviso no painel administrativo.
-- A F2.0a, F2.0b e F2.1 estão implementadas. As demais etapas F2 continuam pendentes: Missões/Histórias, certificados, concessões, cadastro de lojas/ofertas e preços por loja, pedidos, estoque e carteira/transações em Nuques.
-- F3/F4 não foram implementadas: calendário/grade reais, progressão, Taça, coleções com revelações graduais, cartas, jornal, missões, investigações e memórias. As rotas têm apenas estados vazios; não anunciam ações funcionais inexistentes.
+- F2.0a, F2.0b, F2.1 e F2.2a estão implementadas. Faltam os cortes de condução/objetivos/pistas/desfechos de Missões, certificados/PDFs e concessões, além de lojas/ofertas/preços por loja, pedidos, estoque e carteira/transações em Nuques.
+- F3/F4 não foram implementadas: calendário/grade reais, progressão, Taça, coleções com revelações graduais, cartas, jornal, investigações e memórias. Essas rotas ainda têm estados vazios; não anunciam ações funcionais inexistentes.
 - A tabela `publications` prepara futuras publicações; sem editor, envio ou marcação de leitura. Se uma publicação for inserida por uma futura integração, a leitura atual já filtra destinatários/contexto, sem efeitos colaterais.
 - O jogador tem uma conta/um personagem. Não há seletor público de identidade. Contas MASTER administram os personagens e podem convidar outros Mestres; não precisam representar um personagem.
 - Sem recuperação automática de senha, MFA ou troca de e-mail nesta entrega. Não reemita convite para uma conta existente como se isso recuperasse sua senha. A recuperação administrativa precisa ser implementada em fase própria.
@@ -149,4 +157,4 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 
 A especificação completa das 15 oficinas foi comparada com a F0/F1. O [plano com matriz e contratos](docs/OFICINA_GERAL_PLANO.md) e o [backlog por fase, com dependências e testes](docs/BACKLOG_OFICINAS.md) ficam no repositório, com o inventário original preservado e os avanços registrados nas entregas. O planejamento mais recente organiza as próximas entregas em F2–F5 e prevalece sobre o resumo histórico F2–F4 acima.
 
-Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. A F2.0a, F2.0b e F2.1 foram autorizadas e implementadas em branches/PRs próprias. A próxima fase é F2.2a — autoria de Missões e Histórias Individuais; iniciar essa fase ou posteriores exige nova autorização.
+Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. F2.0a, F2.0b, F2.1 e F2.2a foram autorizadas e implementadas em branches/PRs próprias. A próxima fase é F2.2b — objetivos, pistas, fila e desfechos; iniciar essa fase ou posteriores exige nova autorização.
