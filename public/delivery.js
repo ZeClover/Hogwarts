@@ -5,7 +5,7 @@ export function createDelivery({api,state,refresh,navigate,esc}){
   async function acknowledge(){if(!active)return;const id=active.id;close();try{await api('/api/events/'+id+'/ack',{method:'POST'});}catch{/* The persistent event remains retryable. */}await receive();}
   function show(event){
     close();active=event;dialog=document.createElement('dialog');dialog.className='reveal-dialog';dialog.setAttribute('aria-label','Revelação');
-    dialog.innerHTML=`<span class="eyebrow">UMA NOVA DESCOBERTA</span><h2 class="head2">${esc(event.title)}</h2><p class="biography">${esc(event.text)}</p><div class="group"><button class="btn" data-reveal-close>Continuar</button><button class="btn ghost" data-reveal-open>Abrir registro</button></div>`;
+    dialog.innerHTML=`<span class="eyebrow">UMA NOVA DESCOBERTA</span><h2 class="head2">${esc(event.title)}</h2>${event.image?`<img class="reveal-image" src="${esc(event.image)}" alt="${esc(event.alt)}">`:''}<p class="biography">${esc(event.text)}</p><div class="group"><button class="btn" data-reveal-close>Continuar</button><button class="btn ghost" data-reveal-open>Abrir registro</button></div>`;
     document.body.append(dialog);dialog.addEventListener('cancel',e=>{e.preventDefault();void acknowledge();});dialog.querySelector('[data-reveal-close]').onclick=()=>void acknowledge();dialog.querySelector('[data-reveal-open]').onclick=async()=>{const href=event.href;await acknowledge();await navigate(href);};dialog.showModal();dialog.querySelector('button').focus();
   }
   async function receive(){
