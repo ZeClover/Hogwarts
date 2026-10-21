@@ -6,6 +6,13 @@ import { createApplication } from '../dist/server.js';
 import { token, digest, now } from '../dist/auth.js';
 
 export const password='Somente-para-testes-1890!';
+export async function commercialFixture(f,{stock=5,price=29,fileId=null}={}){
+ const policy={audience:'ALL',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null};
+ const internal={category:'',quality:'',materials:'',properties:'',magicDegree:'',activation:'',uses:'',frequency:'',craftingComplexity:'',availability:'',rarity:'',requirements:'',secretText:'SEGREDO COMERCIAL',notes:'',referenceValueNuques:99999,chosenPriceNuques:88888,effects:[]};
+ let item=(await f.master.request('/api/master/workshop/items',{method:'POST',body:{payload:{name:'MERCADORIA DE TESTE',description:'Descrição pública da mercadoria.',fileId,alt:fileId?'Ilustração de teste':'',crop:{x:0,y:0,width:100,height:100}},policy,private:internal}})).value;item=(await f.master.request('/api/master/workshop/items/'+item.id+'/publish',{method:'POST',body:{version:item.version}})).value;
+ const create=async(kind,payload)=>{const r=await f.master.request('/api/master/content/'+kind,{method:'POST',body:{payload,policy,privateNotes:'SEGREDO OFERTA'}});if(r.status!==201)throw new Error(JSON.stringify(r.value));const p=await f.master.request('/api/master/content/'+kind+'/'+r.value.id+'/publish',{method:'POST',body:{version:r.value.version}});if(p.status!==200)throw new Error(JSON.stringify(p.value));return p.value;};
+ const shop=await create('shops',{title:'ESTABELECIMENTO DE TESTE',description:'',locationId:'biblioteca',npcId:null,fileId:null,alt:'',hasCatalog:true,available:true});const offer=await create('offers',{title:'Oferta privada',itemId:item.id,shopId:shop.id,available:true,priceNuques:price,stock,conditions:'CONDIÇÃO PRIVADA'});return {item,shop,offer};
+}
 export async function fixture() {
   const directory=await mkdtemp(join(tmpdir(),'hogwarts-test-'));
   const config={port:0,host:'127.0.0.1',origin:'http://127.0.0.1',secure:false,dataDir:directory,publicDir:resolve('public'),migrationsDir:resolve('migrations')};
