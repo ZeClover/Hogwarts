@@ -1,0 +1,146 @@
+const categoryNames={SCENERY:'Cenários',CREST:'Brasões',OBJECT:'Objetos',DOCUMENT:'Documentos',OTHER:'Outras imagens'};
+const presentationNames={SCENE:'Paisagem',PORTRAIT:'Retrato',COVER:'Capa',CARD:'Cartão'};
+const statusNames={DRAFT:'Rascunho',PREPARED:'Preparado',PUBLISHED:'Publicado',ARCHIVED:'Arquivado'};
+const actionNames={CREATED:'Criação',SAVED:'Rascunho salvo',PREPARE:'Preparado',PUBLISH:'Publicado',DUPLICATED:'Cópia criada',ARCHIVE:'Arquivado',RESTORE:'Restaurado'};
+const base='/portal/mestre/oficinas';
+const defaults=()=>({audience:'SELECTED',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null});
+
+export function createWorkshop({api,esc,ico,label,empty,button,state,render,navigate,toast}){
+  let context=null,current=null,history=[],list=null,preview=null,error=null;
+  let filters={q:'',status:'',category:'',year:'',page:1};
+  const admin=()=>state.session?.role==='MASTER'&&!state.view;
+  const handles=path=>path.startsWith(base)||path==='/portal/midias';
+  const queryString=()=>new URLSearchParams(Object.entries(filters).filter(([,value])=>value!==''));
+  const select=(name,title,options,value='',extra='')=>`<div class="field"><label for="ws-${name}">${title}</label><select id="ws-${name}" name="${name}" ${extra}>${options.map(([id,text])=>`<option value="${esc(id)}" ${String(id)===String(value)?'selected':''}>${esc(text)}</option>`).join('')}</select></div>`;
+  const field=(name,title,value='',extra='')=>`<div class="field"><label for="ws-${name}">${title}</label><input id="ws-${name}" name="${name}" value="${esc(value)}" ${extra}></div>`;
+  const checks=(name,title,options,selected=[])=>`<fieldset class="recipient-field"><legend>${title}</legend><div class="checks">${options.length?options.map(([id,title])=>`<label><input type="checkbox" name="${name}" value="${esc(id)}" ${selected.map(String).includes(String(id))?'checked':''}>${esc(title)}</label>`).join(''):'<p class="subtle">Nenhum cadastro disponível.</p>'}</div></fieldset>`;
+  const formError='<p class="form-error" role="alert" tabindex="-1"></p>';
+  async function load(){
+    error=null;preview=null;
+    if(!handles(state.page))return;
+    if(state.page!== '/portal/midias'&&!admin()){error='Acesso reservado ao Mestre.';return;}
+    try{
+      if(admin())context=await api('/api/master/workshop/context',{preview:false});
+      if(state.page==='/portal/midias')list=await api(`/api/workshop/media?${queryString()}`);
+      else if(state.page===`${base}/midias`)list=await api(`/api/master/workshop/media?${queryString()}`,{preview:false});
+      else if(state.page.startsWith(`${base}/midias/`)){
+        const id=state.page.split('/').pop();
+        if(id==='nova'){current=null;history=[];}
+        else{
+          const result=await Promise.all([api(`/api/master/workshop/media/${id}`,{preview:false}),api(`/api/master/workshop/media/${id}/history`,{preview:false})]);
+          current=result[0];history=result[1].items;
+        }
+      }
+    }catch(e){error=e.message;}
+  }
+  function filterForm(isAdmin){
+    return `<form class="workshop-filters" data-workshop-form="filters">${field('q','Buscar imagem',filters.q,'type="search" maxlength="120"')}${select('category','Categoria',[['','Todas'],...Object.entries(categoryNames)],filters.category)}${isAdmin?select('status','Estado',[['','Todos'],...Object.entries(statusNames)],filters.status):''}${select('year','Ano letivo',[['','Todos'],['1890–1891','1890–1891']],filters.year)}<button class="btn ghost" type="submit">Buscar</button></form>`;
+  }
+  function cards(isAdmin){
+    if(!list?.items.length)return empty(isAdmin?'Sua biblioteca ainda não tem imagens neste filtro.':'Nenhuma imagem liberada por enquanto.');
+    return `<div class="media-grid">${list.items.map(item=>`<article class="card media-record">${isAdmin?`<a href="${base}/midias/${esc(item.id)}" data-go="${base}/midias/${esc(item.id)}">`:''}<img loading="lazy" src="${esc(item.image)}${!isAdmin&&state.view?'&view_as='+encodeURIComponent(state.view):''}" alt="${esc(item.alt??'')}"><div class="media-record-body">${isAdmin?`<span class="badge">${statusNames[item.status]}</span>`:''}<h2>${esc(item.title)}</h2><p class="subtle">${categoryNames[item.category]}</p>${isAdmin&&item.hasUnpublishedChanges?'<p class="draft-warning">Há alterações não publicadas.</p>':''}${!isAdmin?`<p>${esc(item.description)}</p>${item.credit?`<small class="muted">${esc(item.credit)}</small>`:''}`:''}</div>${isAdmin?'</a>':''}</article>`).join('')}</div>`;
+  }
+  function pagination(){
+    if(!list||list.total<=list.pageSize)return '';
+    return `<nav class="workshop-pagination" aria-label="Páginas da biblioteca"><button class="btn ghost" data-workshop-action="previous" ${list.page<=1?'disabled':''}>Anterior</button><span>Página ${list.page} · ${list.total} imagens</span><button class="btn ghost" data-workshop-action="next" ${list.page*list.pageSize>=list.total?'disabled':''}>Próxima</button></nav>`;
+  }
+  function office(){
+    return `${label('ADMINISTRAÇÃO')}<div class="workshop-title"><div><h1 class="display">Oficina Geral do Mestre</h1><p class="muted">Prepare imagens, escolha seus destinatários e cuide dos seus arquivos.</p></div>${button('Central da Sessão','/portal/mestre','shield')}</div><div class="tiles">${`<a class="entry" data-go="${base}/midias" href="${base}/midias" style="background-image:url('/assets/biblioteca_hogwarts.webp')"><span class="entry-symbol">${ico('book',24)}</span><strong>Biblioteca de Mídia</strong><span>Imagens, capas e apresentações</span></a>`}</div><section class="card workshop-cohorts"><h2 class="head3">Turmas e destinatários</h2><p class="subtle">Organize turmas para restringir a consulta às imagens. Grupos e personagens continuam na Central da Sessão.</p><div class="dual">${[...context.cohorts,{id:'',name:'',members:[]}].map((c,index)=>`<form data-workshop-form="cohort" data-id="${esc(c.id)}" data-version="${c.version??''}"><label class="field">${c.id?'Nome da turma':'Nova turma'}<input name="name" aria-label="${c.id?'Nome da turma':'Nova turma'}" value="${esc(c.name)}" maxlength="80" required></label><fieldset class="recipient-field"><legend>Integrantes ${index+1}</legend><div class="checks">${context.characters.map(character=>`<label><input type="checkbox" name="members" value="${esc(character.id)}" ${c.members.includes(character.id)?'checked':''}>${esc(character.name)}</label>`).join('')}</div></fieldset>${formError}<button class="btn ghost" type="submit">${c.id?'Salvar turma':'Criar turma'}</button></form>`).join('')}</div></section>`;
+  }
+  function policyEditor(p){
+    return `<section class="editor-section"><h2 class="head3">Quem pode consultar</h2>${select('audience','Público',[['SELECTED','Personagens e grupos selecionados'],['ALL','Todos os personagens autorizados']],p.audience)}<p class="subtle">As restrições abaixo se somam ao público escolhido. Uma exceção individual sempre impede o acesso.</p><div class="dual">${checks('characters','Personagens',context.characters.map(c=>[c.id,c.name]),p.characters)}${checks('groups','Grupos',context.groups.map(g=>[g.id,g.name]),p.groups)}</div><details class="advanced-fields"><summary>Restrições e exceções</summary><div class="dual">${checks('houses','Casas permitidas',context.houses.map(h=>[h.id,h.name]),p.houses)}${checks('schoolYears','Anos escolares permitidos',[1,2,3,4,5,6,7].map(y=>[y,`${y}º ano`]),p.schoolYears)}${checks('cohorts','Turmas permitidas',context.cohorts.map(c=>[c.id,c.name]),p.cohorts)}${checks('excludedCharacters','Excluir personagens',context.characters.map(c=>[c.id,c.name]),p.excludedCharacters)}</div>${select('regionId','Exige região aberta',[['','Sem restrição de região'],...context.regions.map(r=>[r.id,r.title])],p.regionId??'')}${select('locationId','Exige local disponível',[['','Sem restrição de local'],...context.locations.map(l=>[l.id,l.title])],p.locationId??'')}<p class="subtle">Se uma lista de Casas, turmas ou anos ficar vazia, ela não acrescenta restrições.</p></details></section>`;
+  }
+  function policyDescription(p){
+    const names=(ids,rows,key='name')=>ids.map(id=>rows.find(row=>row.id===id)?.[key]??'Registro removido').join(', ');
+    return [p.audience==='ALL'?'Todos autorizados':'Seleção: '+[names(p.characters,context.characters),names(p.groups,context.groups)].filter(Boolean).join('; '),
+      p.houses.length?'Casas: '+names(p.houses,context.houses):'',p.schoolYears.length?'Anos: '+p.schoolYears.join(', '):'',
+      p.cohorts.length?'Turmas: '+names(p.cohorts,context.cohorts):'',p.excludedCharacters.length?'Exceções: '+names(p.excludedCharacters,context.characters):'',
+      p.regionId?'Região: '+names([p.regionId],context.regions,'title'):'',p.locationId?'Local: '+names([p.locationId],context.locations,'title'):''].filter(Boolean).join(' · ');
+  }
+  function editor(){
+    const c=current,payload=c?.payload??{title:'',description:'',alt:'',category:'SCENERY',credit:'',academicYear:'1890–1891',fileId:'',presentation:'SCENE',crop:{x:0,y:0,width:100,height:100}},archived=c?.status==='ARCHIVED';
+    return `${label('OFICINA GERAL','Biblioteca de Mídia')}<div class="workshop-title"><div><h1 class="display">${c?'Editar imagem':'Nova imagem'}</h1>${c?`<span class="badge">${statusNames[c.status]} · revisão ${c.version}</span>${c.hasUnpublishedChanges?'<p class="draft-warning">Alterações salvas ainda não publicadas.</p>':''}`:''}</div>${button('Biblioteca de Mídia',`${base}/midias`,'book')}</div><div class="workshop-editor"><div><form class="card media-editor-form" data-workshop-form="media"><fieldset ${archived?'disabled':''} class="editor-fields"><legend class="sr-only">Dados da imagem</legend>${field('title','Nome',payload.title,'required maxlength="120"')}<div class="field"><label for="ws-description">Descrição visível</label><textarea id="ws-description" name="description" rows="3" maxlength="3000">${esc(payload.description)}</textarea></div><div class="dual">${select('category','Categoria',Object.entries(categoryNames),payload.category)}${select('academicYear','Ano letivo',[['1890–1891','1890–1891']],payload.academicYear)}</div><fieldset class="source-fields"><legend>Escolha a imagem</legend><div class="field"><label for="ws-upload">Enviar uma imagem</label><input id="ws-upload" name="upload" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG ou WebP · até 2 MB.</small></div>${select('asset','Ou selecionar uma imagem V4',[['','Escolher imagem aprovada'],...context.approvedAssets.map(a=>[a,a.replaceAll('_',' ').replace('.webp','')])])}${select('fileId','Ou reutilizar um arquivo da biblioteca',[['','Escolher arquivo'],...context.files.map((f,index)=>[f.id,`Imagem ${index+1} · ${f.width} × ${f.height}`])],payload.fileId)}<img id="source-preview" class="source-preview" src="${esc(c?.file?.image??'/assets/hogwarts.webp')}" alt="Imagem escolhida para edição"><p id="source-note" class="subtle">${c?.file?.originalAlreadyPublic?'Esta arte V4 já é pública na ambientação do portal. Restringir este registro não torna o arquivo original secreto.':''}</p></fieldset>${field('alt','Texto alternativo',payload.alt,'maxlength="300"')}<details class="advanced-fields"><summary>Corte, apresentação e notas</summary>${select('presentation','Apresentação',Object.entries(presentationNames),payload.presentation)}<div class="crop-fields">${[['cropX','Início horizontal (%)','x',0],['cropY','Início vertical (%)','y',0],['cropWidth','Largura (%)','width',0.1],['cropHeight','Altura (%)','height',0.1]].map(([name,title,key,min])=>field(name,title,payload.crop[key],`type="number" min="${min}" max="100" step="0.1" required`)).join('')}</div><p class="subtle">Salve o rascunho para conferir o corte na prévia. Nome e texto alternativo são necessários para publicar.</p>${field('credit','Crédito ou origem visível',payload.credit,'maxlength="300"')}<div class="field"><label for="ws-privateNotes">Notas privadas do Mestre</label><textarea id="ws-privateNotes" name="privateNotes" rows="3" maxlength="5000">${esc(c?.privateNotes??'')}</textarea></div></details>${policyEditor(c?.policy??defaults())}${formError}<button class="btn" type="submit">${c?'Salvar rascunho':'Criar rascunho'}</button></fieldset></form></div><aside class="editor-sidebar">${c?`<section class="card editor-actions"><h2 class="head3">Ações do registro</h2><p class="subtle">Publicar libera a revisão salva para seus destinatários. Arquivar retira esta imagem da biblioteca dos jogadores e preserva seu histórico.</p><div class="editor-action-buttons">${!archived?`<button class="btn ghost" data-workshop-action="prepare" ${c.status==='PUBLISHED'?'disabled':''}>Preparar</button><button class="btn" data-workshop-action="ask-publish">Revisar publicação</button><button class="btn ghost" data-workshop-action="ask-archive">Arquivar</button>`:`<button class="btn" data-workshop-action="restore">Restaurar sem publicar</button>`}<button class="btn ghost" data-workshop-action="duplicate">Duplicar como rascunho</button></div><div id="workshop-confirm" aria-live="polite"></div></section><section class="card editor-preview"><h2 class="head3">Prévia como personagem</h2><form data-workshop-form="preview">${select('previewCharacter','Personagem da prévia',context.characters.map(ch=>[ch.id,ch.name]))}${select('previewSource','Revisão da prévia',[['draft','Rascunho salvo'],...(c.publishedRevision?[['published','Revisão publicada']]:[])])}${formError}<button class="btn ghost" type="submit">Conferir acesso e aparência</button></form><div id="workshop-preview-result">${empty('Escolha um personagem para conferir sua visão.')}</div></section><section class="card editor-history"><h2 class="head3">Histórico de alterações</h2><p class="subtle">Revisões preservadas · somente Mestre.</p>${history.map(h=>`<details><summary>Revisão ${h.version} · ${actionNames[h.action]??esc(h.action)}</summary><time>${new Date(h.createdAt*1000).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}</time><dl><dt>Autor</dt><dd>${esc(context.authors.find(a=>a.id===h.actorId)?.email??'Mestre')}</dd><dt>Nome</dt><dd>${esc(h.snapshot.payload.title)}</dd><dt>Estado</dt><dd>${statusNames[h.snapshot.status]}</dd><dt>Descrição</dt><dd>${esc(h.snapshot.payload.description||'—')}</dd><dt>Texto alternativo</dt><dd>${esc(h.snapshot.payload.alt||'—')}</dd><dt>Crédito</dt><dd>${esc(h.snapshot.payload.credit||'—')}</dd><dt>Corte</dt><dd>${h.snapshot.payload.crop.x}%, ${h.snapshot.payload.crop.y}% · ${h.snapshot.payload.crop.width}% × ${h.snapshot.payload.crop.height}%</dd><dt>Público e restrições</dt><dd>${esc(policyDescription(h.snapshot.policy))}</dd><dt>Notas privadas</dt><dd>${esc(h.snapshot.privateNotes||'—')}</dd></dl></details>`).join('')}</section>`:empty('Salve o primeiro rascunho para preparar, publicar e conferir as revisões.')}</aside></div>`;
+  }
+  function page(){
+    if(error)return `${label('OFICINA GERAL')}${empty(error)}${button('Voltar ao início','/portal/inicio')}`;
+    if(state.page===base)return office();
+    if(state.page===`${base}/midias`||state.page==='/portal/midias'){
+      const isAdmin=state.page!== '/portal/midias';
+      return `${label(isAdmin?'OFICINA GERAL':'ARQUIVOS LIBERADOS')}<div class="workshop-title"><div><h1 class="display">${isAdmin?'Biblioteca de Mídia':'Galeria de Imagens'}</h1><p class="muted">${isAdmin?'Organize sua arte e libere apenas o que deseja revelar.':'Imagens compartilhadas com você.'}</p></div>${isAdmin?button('Nova imagem',`${base}/midias/nova`,'star'):''}</div>${filterForm(isAdmin)}${cards(isAdmin)}${pagination()}`;
+    }
+    return editor();
+  }
+  function previewMarkup(value){
+    if(!value.accessible)return empty('Esta revisão não está disponível para o personagem selecionado.');
+    const m=value.media;return `<article class="media-record preview-${m.presentation.toLowerCase()}"><img src="${esc(m.image)}" alt="${esc(m.alt)}"><div class="media-record-body"><h3 class="head3">${esc(m.title)}</h3><p>${esc(m.description)}</p><small class="muted">${esc(m.credit)}</small></div></article><p class="subtle">Somente leitura. A prévia não publica nem registra leitura.</p>`;
+  }
+  async function submit(form){
+    if(state.busy)return;state.busy=true;
+    const submit=form.querySelector('button[type="submit"]'),errorEl=form.querySelector('.form-error'),data=new FormData(form),kind=form.dataset.workshopForm;
+    if(submit){submit.disabled=true;submit.setAttribute('aria-busy','true');}if(errorEl)errorEl.textContent='';
+    try{
+      if(kind==='filters'){
+        filters={q:String(data.get('q')??''),category:String(data.get('category')??''),status:String(data.get('status')??''),year:String(data.get('year')??''),page:1};
+        state.dirty=false;await load();render();return;
+      }
+      if(!admin())throw new Error('Acesso reservado ao Mestre.');
+      if(kind==='preview'){
+        preview=await api(`/api/master/workshop/media/${current.id}/preview?character=${encodeURIComponent(data.get('previewCharacter'))}&source=${data.get('previewSource')}`,{preview:false});
+        document.querySelector('#workshop-preview-result').innerHTML=previewMarkup(preview);return;
+      }
+      if(kind==='cohort'){
+        const id=form.dataset.id;await api(`/api/master/workshop/cohorts${id?'/'+id:''}`,{method:id?'PATCH':'POST',preview:false,body:{name:data.get('name'),members:data.getAll('members'),...(id?{version:Number(form.dataset.version)}:{})}});
+        state.dirty=false;await load();render();toast('Turma salva.');return;
+      }
+      const upload=data.get('upload'),asset=String(data.get('asset')??'');
+      let fileId=String(data.get('fileId')??'');
+      if(upload?.size){
+        if(upload.size>2*1024*1024)throw new Error('Escolha uma imagem de até 2 MB.');
+        fileId=(await api('/api/master/workshop/files',{method:'POST',raw:true,body:upload,preview:false})).id;
+      }else if(asset)fileId=(await api('/api/master/workshop/files',{method:'POST',preview:false,body:{asset}})).id;
+      if(!fileId)throw new Error('Envie ou selecione uma imagem.');
+      const policy={audience:data.get('audience'),characters:data.getAll('characters'),groups:data.getAll('groups'),houses:data.getAll('houses'),schoolYears:data.getAll('schoolYears').map(Number),cohorts:data.getAll('cohorts'),excludedCharacters:data.getAll('excludedCharacters'),regionId:data.get('regionId')||null,locationId:data.get('locationId')||null};
+      const payload={title:data.get('title'),description:data.get('description'),alt:data.get('alt'),category:data.get('category'),credit:data.get('credit'),academicYear:data.get('academicYear'),presentation:data.get('presentation'),fileId,crop:{x:Number(data.get('cropX')),y:Number(data.get('cropY')),width:Number(data.get('cropWidth')),height:Number(data.get('cropHeight'))}};
+      const saved=await api(`/api/master/workshop/media${current?'/'+current.id:''}`,{method:current?'PATCH':'POST',preview:false,body:{...(current?{version:current.version}:{}),payload,policy,privateNotes:data.get('privateNotes')}});
+      state.dirty=false;await navigate(`${base}/midias/${saved.id}`,true);toast('Rascunho salvo. A publicação é uma ação separada.');
+    }catch(e){if(errorEl){errorEl.textContent=e.message;errorEl.focus();}else toast(e.message,true);}
+    finally{state.busy=false;if(submit){submit.disabled=false;submit.removeAttribute('aria-busy');}}
+  }
+  function attach(root){
+    root.addEventListener('submit',event=>{
+      const form=event.target;if(!(form instanceof HTMLFormElement)||!form.dataset.workshopForm)return;
+      event.preventDefault();void submit(form);
+    });
+    root.addEventListener('change',event=>{
+      if(!['asset','fileId'].includes(event.target.name))return;
+      const target=event.target,image=root.querySelector('#source-preview'),note=root.querySelector('#source-note');if(!image)return;
+      if(target.name==='asset'&&target.value){image.src='/assets/'+encodeURIComponent(target.value);note.textContent='Esta arte V4 já é pública na ambientação do portal. A restrição vale para este registro.';}
+      else if(target.name==='fileId'&&target.value){const f=context.files.find(f=>f.id===target.value);if(f){image.src=f.image;note.textContent=f.originalAlreadyPublic?'Arte V4 de ambientação já pública.':'';}}
+    });
+    root.addEventListener('click',async event=>{
+      const el=event.target.closest('[data-workshop-action]');if(!el)return;event.preventDefault();if(state.busy)return;
+      const action=el.dataset.workshopAction;
+      if(action==='ask-publish'||action==='ask-archive'){
+        const confirm=root.querySelector('#workshop-confirm'),publish=action==='ask-publish';
+        confirm.innerHTML=`<div class="action-confirm"><p>${publish?'Publicar a revisão salva para os destinatários definidos?':'Arquivar este registro e retirar seu acesso da galeria? O histórico será preservado.'}</p><button class="btn" data-workshop-action="${publish?'publish':'archive'}">${publish?'Confirmar publicação':'Confirmar arquivamento'}</button><button class="btn ghost" data-workshop-action="cancel">Cancelar</button></div>`;
+        confirm.querySelector('button').focus();return;
+      }
+      if(action==='cancel'){root.querySelector('#workshop-confirm').innerHTML='';return;}
+      state.busy=true;el.disabled=true;
+      try{
+        if(action==='next'||action==='previous'){filters.page+=action==='next'?1:-1;await load();render();return;}
+        if(!admin())throw new Error('Acesso reservado ao Mestre.');
+        if(state.dirty)throw new Error('Salve ou recarregue suas alterações antes desta ação.');
+        const saved=await api(`/api/master/workshop/media/${current.id}/${action}`,{method:'POST',preview:false,body:{version:current.version}});
+        await navigate(`${base}/midias/${saved.id}`,true);toast(action==='restore'?'Registro restaurado sem publicar. Revise e publique para liberar.':'Ação registrada.');
+      }catch(e){toast(e.message,true);}finally{state.busy=false;el.disabled=false;}
+    });
+  }
+  async function poll(){
+    const path=state.page==='/portal/midias'?'/api/workshop/media':state.page===`${base}/midias`?'/api/master/workshop/media':null;
+    if(!path)return;
+    const next=await api(`${path}?${queryString()}`);
+    if(JSON.stringify(next)!==JSON.stringify(list)){list=next;render();}
+  }
+  return {handles,load,page,attach,poll};
+}

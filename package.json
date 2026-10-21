@@ -11,7 +11,7 @@
     "build": "tsc && node scripts/check-assets.mjs",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src public/app.js tests scripts",
+    "lint": "eslint src public/*.js tests scripts",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:e2e": "npm run build && playwright test",
     "db:migrate": "node --env-file-if-exists=.env --experimental-strip-types src/cli.ts migrate",
