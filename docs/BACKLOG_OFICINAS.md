@@ -1,6 +1,6 @@
 # Backlog de implementação — 15 oficinas
 
-**F2.0a, F2.0b e F2.1 autorizadas e implementadas em branches/PRs próprias.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, conforme [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). OF04-01 e o corte aplicável de OF04-02 estão entregues em [F2_0B_ENTREGA.md](F2_0B_ENTREGA.md): cadastro e referências reais nos locais existentes; seletores em missões/lojas serão integrados quando seus editores existirem. OF02-01/02 estão entregues em [F2_1_ENTREGA.md](F2_1_ENTREGA.md): editor de itens independente de ofertas, valores privados e cópia do conteúdo revelado. As outras 37 tarefas seguem planejadas. As PRs #1/F0/F1, #2/F2.0a e #3/F2.0b e o Hub RPG permanecem preservados.
+**F2.0a, F2.0b, F2.1 e F2.2a autorizadas e implementadas em branches/PRs próprias.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, conforme [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). OF04-01 e o corte aplicável de OF04-02 estão entregues em [F2_0B_ENTREGA.md](F2_0B_ENTREGA.md): cadastro e referências reais nos locais existentes; o seletor em missões/arcos/entradas já está integrado na F2.2a, e o de lojas virá com seu editor. OF02-01/02 estão entregues em [F2_1_ENTREGA.md](F2_1_ENTREGA.md): editor de itens independente de ofertas, valores privados e cópia do conteúdo revelado. OF01-01/02 estão entregues no corte de autoria em [F2_2A_ENTREGA.md](F2_2A_ENTREGA.md): missão/anúncio/liberação/início separados e arcos pessoais com capítulos reveláveis. As outras 35 tarefas seguem planejadas; a Oficina de Missões completa ainda depende da F2.2b/F2.2c. As PRs #1–#4 e o Hub RPG permanecem preservados.
 
 Fonte integral: `Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`, especificação incorporada v1.0 de 21/10/2026. [Matriz, contratos e arquitetura](OFICINA_GERAL_PLANO.md).
 
@@ -33,7 +33,7 @@ Uma tarefa de infraestrutura só entra junto a um uso real na interface. Uma ofi
 
 ## F2.0b — OF-04: NPCs reutilizáveis
 
-**Entregue no escopo atual.** Editor completo de NPC, perfis autorizados, fragmentos e revelações por personagem. OF04-02 usa um ID nos múltiplos locais já existentes e endpoints de referências protegidos; não antecipa editores de missão/loja nem declara concluídas essas integrações futuras.
+**Entregue no escopo atual.** Editor completo de NPC, perfis autorizados, fragmentos e revelações por personagem. OF04-02 usa um ID nos múltiplos locais já existentes e endpoints de referências protegidos; missões/arcos/entradas passaram a usar o mesmo cadastro na F2.2a; o editor de loja e seu seletor continuam futuros.
 
 | ID | Entidades | Editor + projeção do jogador | Regra / aceite específico | Teste de fluxo além de C1–C8 | Dependência |
 | --- | --- | --- | --- | --- | --- |
@@ -50,6 +50,8 @@ Uma tarefa de infraestrutura só entra junto a um uso real na interface. Uma ofi
 | OF02-02 | Estimativa e preço interno do item, versão pública por uso | Campos privados editáveis pelo Mestre; catálogo só imagem/nome/descrição revelada e ação discreta | Mestre escolhe preço livremente; preço interno é distinto de oferta; sem textos sobre Discord/RP no catálogo | Inspecionar JSON/HTML/busca/preview de A: nenhum preço/segredo; cópia pública para Hub contém só dados revelados | OF02-01 |
 
 ## F2.2a–c — OF-01: Side-Quests e Histórias Individuais
+
+**F2.2a entregue:** OF01-01/02 têm editor real, participantes com liberação/início separados, vínculo ao NPC existente, arcos/entradas e Diário autorizado. Arquivamento preserva a leitura histórica; revogação é separada. [Escopo e evidências](F2_2A_ENTREGA.md). OF01-03 a OF01-08 continuam pendentes.
 
 Este é o núcleo de prioridade narrativa. Os cortes permitem PRs menores, mas o módulo só recebe o rótulo completo quando autoria, condução, resultados, certificados e confirmação de recompensas suportadas estiverem testados. Recompensas monetárias exigem F2.4; recompensas de coleção exigem o domínio correspondente da F4. Não simular concessões enquanto a dependência não existir.
 
@@ -121,4 +123,4 @@ Este é o núcleo de prioridade narrativa. Os cortes permitem PRs menores, mas o
 - **Portão F4:** cinco editores, revelação/filas, sorteio transacional justo conforme configuração, correspondência com privacidade de rascunho e entrega manual, jornal global.
 - **Portão F5:** autoria de anuários/retrospectivas e contribuição coletiva sem vazamento, continuidade anual, biblioteca/template e operações de dados verificáveis.
 
-**F2.0a, F2.0b e F2.1 foram autorizadas e entregues. A próxima fase F2.2a — Missões e Histórias Individuais ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
+**F2.0a, F2.0b, F2.1 e F2.2a foram autorizadas e entregues. A próxima fase F2.2b — objetivos, pistas, fila e desfechos ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.

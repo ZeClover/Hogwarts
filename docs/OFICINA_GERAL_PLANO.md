@@ -1,17 +1,17 @@
 # Oficina Geral do Mestre — análise e plano de evolução
 
-Status atualizado nesta branch: **F2.0a, F2.0b e F2.1 autorizadas e implementadas**, com [entrega de mídia](F2_0A_ENTREGA.md), [entrega de NPCs](F2_0B_ENTREGA.md) e [entrega de itens](F2_1_ENTREGA.md). Demais oficinas/fases permanecem planejadas. As PRs #1/F0/F1, #2/F2.0a e #3/F2.0b e a branch documental original permanecem preservadas; esta branch acrescenta somente a fase de Itens.
+Status atualizado nesta branch: **F2.0a, F2.0b, F2.1 e F2.2a autorizadas e implementadas**, com [entrega de mídia](F2_0A_ENTREGA.md), [entrega de NPCs](F2_0B_ENTREGA.md), [entrega de itens](F2_1_ENTREGA.md) e [autoria narrativa](F2_2A_ENTREGA.md). Demais oficinas/fases permanecem planejadas. As PRs #1–#4 e a branch documental original permanecem preservadas; esta branch acrescenta somente o corte F2.2a de autoria narrativa.
 
 ## Fontes e limite da análise
 
 Foram comparados o código F0/F1 em `25db4a80e1ced6e904f9072dee72d81904998672`, a migração inicial, as APIs reais, os testes, os anexos V4 e o arquivo **`Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`**, lido integralmente (399 linhas), incluindo sua especificação incorporada, versão 1.0 de 21/10/2026.
 
-O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou separadamente F2.0a, depois F2.0b e agora F2.1 nesta sessão; fundação/PR/Hub/V4 seguem preservados e as etapas posteriores continuam exigindo nova autorização.
+O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou separadamente F2.0a, depois F2.0b, F2.1 e agora F2.2a nesta sessão; fundação/PR/Hub/V4 seguem preservados e as etapas posteriores continuam exigindo nova autorização.
 A regra principal passa a ser: uma seção de conteúdo só está completa quando o Mestre consegue criar, editar, publicar/revelar e arquivar seu conteúdo no site, com persistência, destinatários, proteção de campos e fluxo verificado até o jogador. Uma tela de consulta ou uma tabela vazia não satisfaz isso.
 
 ## Matriz: editor existente / ausente / dependências / fase — baseline F0/F1
 
-Esta matriz registra o inventário da F0/F1 no commit de referência. Os avanços posteriores estão detalhados nas entregas [F2.0a](F2_0A_ENTREGA.md), [F2.0b](F2_0B_ENTREGA.md) e [F2.1](F2_1_ENTREGA.md). “Existente” significa uma operação implementada e persistida pelo servidor. “Parcial” nunca equivale a oficina completa. As fases abaixo subdividem F2–F5 para revisão em PRs pequenos; não mudam a F0/F1 entregue.
+Esta matriz registra o inventário da F0/F1 no commit de referência. Os avanços posteriores estão detalhados nas entregas [F2.0a](F2_0A_ENTREGA.md), [F2.0b](F2_0B_ENTREGA.md), [F2.1](F2_1_ENTREGA.md) e [F2.2a](F2_2A_ENTREGA.md). “Existente” significa uma operação implementada e persistida pelo servidor. “Parcial” nunca equivale a oficina completa. As fases abaixo subdividem F2–F5 para revisão em PRs pequenos; não mudam a F0/F1 entregue.
 
 | Oficina | Editor existente hoje | Editor ausente / lacuna | Dependências | Fase proposta |
 | --- | --- | --- | --- | --- |
@@ -131,9 +131,9 @@ Para PDFs, começar com templates estruturados e personalizáveis com texto, cam
 | --- | --- | --- |
 | F0/F1 — preservada | Fundação, perfis, convites, Casas, grupos, regiões/locais e prévia | PR #1 preservada; Oficina Geral foi acrescentada nas entregas F2.0a/F2.0b sem alterar essa branch original |
 | F2.0a — Oficina Geral, mídia e contrato editorial | Entrada administrativa unificada, biblioteca de imagens aprovadas, upload, vínculo e versão; padrão de rascunho/publicação/destinatários testado em um recurso real | Entregue nesta branch para mídia; demais oficinas continuam pendentes |
-| F2.0b — NPCs reutilizáveis | Criar/editar NPC, campos públicos/segredos, publicar/liberar/arquivar e consulta autorizada | Entregue: reusa F2.0a, vínculos nos locais atuais e revelação separada; sem respostas automáticas. Integrações nos futuros editores continuam pendentes |
+| F2.0b — NPCs reutilizáveis | Criar/editar NPC, campos públicos/segredos, publicar/liberar/arquivar e consulta autorizada | Entregue: reusa F2.0a, vínculos nos locais atuais e revelação separada; sem respostas automáticas. Missões/arcos/entradas integrados na F2.2a; integração de lojas continua pendente |
 | F2.1 — Itens | Editor rápido/avançado, segredos, estimativa/preço privados, duplicação e arquivo; sem associação automática | Entregue: cadastro e artigos autorizados, valores privados e efeitos ordenáveis; prepara recompensas e ofertas, sem criar comércio |
-| F2.2a — Missões: autoria e participantes | Side-quest e história individual, publicação separada de início, participantes e dois Diários | NPCs, locais, núcleo; editor usável persistente, com arcos pessoais/capítulos separados |
+| F2.2a — Missões: autoria e participantes | Side-quest e história individual, publicação separada de início, participantes e dois Diários | Entregue: NPCs/locais por ID, anúncio/liberação/início separados, arcos e capítulos privados; objetivos/desfechos/documentos continuam nos cortes seguintes |
 | F2.2b — Missões: condução e resultado | Objetivos manuais, pistas por destinatário, condições verificadas pelo Mestre, andamento e três resultados | Não declarar Oficina de Missões completa sem este corte e o seguinte |
 | F2.2c — Missões: certificados e concessão | Template, PDF privado individual e confirmação idempotente de recompensas; comprovantes públicos para cópia manual | Depende de mídia/templates/itens; parte monetária depende de F2.4 |
 | F2.3 — Lojas e ofertas | Editor completo de loja/NPC/localização, associação manual de itens, estoque, preço privado por loja e disponibilidade | Reutiliza regiões/locais/markers atuais; não substituir a fundação |
@@ -173,7 +173,7 @@ A especificação já resolve estes pontos: rascunho do Correio é do autor; an�
 
 Decisões de implementação a resolver somente na fase correspondente: tratamento de novos participantes sem revelar capítulos retroativamente; layout/campos editáveis de cada template; revogação controlada de um PDF já emitido; origem do pacote e regras de duplicatas; confirmar se venda direta do Mestre integra a F2.4. Nenhuma depende de escrever previamente conteúdo, números de missões, estoques ou cartas reais.
 
-**Próximo código: aguardar autorização do usuário para F2.2a (Missões e Histórias Individuais).** A F2.0a, F2.0b e F2.1 foram entregues; seguem os três cortes de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. Nenhuma fase será iniciada automaticamente ao concluir este plano.
+**Próximo código: aguardar autorização do usuário para F2.2b (objetivos, pistas, fila e desfechos).** F2.0a, F2.0b, F2.1 e o corte F2.2a foram entregues; F2.2b/F2.2c continuam necessários para completar a Oficina de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. Nenhuma fase será iniciada automaticamente ao concluir este plano.
 
 ## Complementos da leitura integral — requisitos vinculantes
 
