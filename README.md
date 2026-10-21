@@ -126,3 +126,9 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 - O jogador tem uma conta/um personagem. Não há seletor público de identidade. Contas MASTER administram os personagens e podem convidar outros Mestres; não precisam representar um personagem.
 - Sem recuperação automática de senha, MFA ou troca de e-mail nesta entrega. Não reemita convite para uma conta existente como se isso recuperasse sua senha. A recuperação administrativa precisa ser implementada em fase própria.
 - O sistema não transmite nada ao Discord nem ao Hub RPG. O inventário mecânico permanece exclusivamente no Hub.
+
+## Planejamento complementar — Oficina Geral
+
+A especificação completa das 15 oficinas foi comparada com a F0/F1. O [plano com matriz e contratos](docs/OFICINA_GERAL_PLANO.md) e o [backlog por fase, com dependências e testes](docs/BACKLOG_OFICINAS.md) ficam nesta branch documental separada. O planejamento mais recente organiza as próximas entregas em F2–F5 e prevalece sobre o resumo histórico F2–F4 acima.
+
+Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada e nenhuma nova fase está autorizada.
