@@ -1,18 +1,24 @@
 # Hogwarts 1890 — Arquivos Mágicos
 
-Portal privado para a campanha de 1890–1891. Fundação **F0/F1** e **F2.0a/F2.0b — Oficina Geral, Mídia e NPCs**, independentes do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
+Portal privado para a campanha de 1890–1891. Fundação **F0/F1** e **F2.0a/F2.0b/F2.1 — Oficina Geral, Mídia, NPCs e Itens**, independentes do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
 
 ## Oficina Geral — F2.0a
 
 O Mestre já pode criar, editar, preparar, publicar, duplicar e arquivar registros na **Oficina Geral → Biblioteca de Mídia**, com upload/seleção V4, corte, metadados, notas privadas, destinatários, turmas, prévia e histórico. Jogadores consultam somente imagens liberadas em **Acervos → Galeria de Imagens**. Rascunhos e revisões publicadas são independentes.
 
-[Entrega F2.0a: uso, rotas, migração, capturas, verificações e limites](docs/F2_0A_ENTREGA.md). A PR da fundação permanece preservada; esta fase tem sua própria branch/PR. A entrega seguinte de NPCs está descrita abaixo; Itens, Lojas e Missões continuam planejados.
+[Entrega F2.0a: uso, rotas, migração, capturas, verificações e limites](docs/F2_0A_ENTREGA.md). A PR da fundação permanece preservada; esta fase tem sua própria branch/PR. As entregas seguintes de NPCs e Itens estão descritas abaixo; Lojas e Missões continuam planejadas.
 
 ## NPCs — F2.0b
 
 Em **Oficina Geral → NPCs**, o Mestre cria perfis com retrato opcional, papel, Casa, vários locais, notas exclusivas e informações progressivas. Publicar libera o perfil conforme o público escolhido; cada informação exige revelação explícita aos personagens. Editar e republicar o texto de uma pista não substitui o conhecimento anterior sem nova revelação. O jogador consulta **Acervos → Pessoas conhecidas** e os contatos autorizados nos locais.
 
 [Entrega F2.0b: uso, segurança, migração, testes e limites](docs/F2_0B_ENTREGA.md). NPCs são distintos dos cinco protagonistas, reutilizáveis pelo mesmo ID e não respondem automaticamente. A PR anterior de mídia permanece preservada.
+
+## Itens — F2.1
+
+Em **Oficina Geral → Itens**, o Mestre cadastra objetos com nome/descrição revelada, imagem opcional e corte, categoria, qualidade, materiais, propriedades, efeitos ordenáveis, requisitos, usos/cargas, fabricação e segredos. Estimativa e preço escolhido são privados e independentes, informados em Galeões/Sicles/Nuques e armazenados em Nuques inteiros. Publicar libera só o artigo autorizado em **Acervos → Artigos revelados**, com cópia da descrição pública; não cria oferta, posse, compra ou recompensa.
+
+[Entrega F2.1: uso, rotas, migração, testes e limites](docs/F2_1_ENTREGA.md). As propriedades internas só são reveladas se o Mestre decidir incluí-las na descrição pública. Cada item mantém um ID reutilizável para as futuras ofertas e recompensas.
 
 ## O que está pronto
 
@@ -90,7 +96,7 @@ A interface consulta o estado a cada 5 segundos quando a aba está visível; per
 
 Fotos: JPG/PNG/WebP, até 2 MiB e 16 milhões de pixels, sem animação. O servidor valida assinatura e tipo real, decodifica, remove metadados e regrava WebP de até 512×512. O nome original não é armazenado. Os arquivos ficam fora de `public/`, com leitura autenticada e autorização do proprietário/Mestre; futuras publicações/mídias possuem estrutura de permissões explícitas. A remoção revoga a URL atual e apaga seus bytes. Fotos antigas substituídas permanecem privadas no armazenamento até manutenção manual; não há rotina automática de limpeza nesta fase.
 
-O servidor filtra os registros **antes** de gerar os DTOs para o navegador. Regiões fechadas não enviam nomes, IDs, marcadores ou imagens de seus locais. Coleções inéditas não enviam nomes/contagens. Apenas publicações `PUBLISHED` com destinatário e contexto autorizados podem aparecer em novidades. A tabela legada `publications` ainda não possui editor; mídia e NPCs usam seus próprios domínios de publicação.
+O servidor filtra os registros **antes** de gerar os DTOs para o navegador. Regiões fechadas não enviam nomes, IDs, marcadores ou imagens de seus locais. Coleções inéditas não enviam nomes/contagens. Apenas publicações `PUBLISHED` com destinatário e contexto autorizados podem aparecer em novidades. A tabela legada `publications` ainda não possui editor; mídia, NPCs e itens usam seus próprios domínios de publicação.
 
 Arquivos visuais de ambientação em `public/assets/` são públicos por definição; não coloque material secreto ali. Os exemplos de jornal do protótipo foram excluídos do diretório publicado. Nada é descoberto por visitar uma página.
 
@@ -132,7 +138,7 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 ## Limitações e próximas fases
 
 - O mapa restaurado de Hogsmeade é **provisório**. O Mestre deve aprovar a qualidade/posições ou fornecer uma captura limpa fiel ao jogo. Há aviso no painel administrativo.
-- A F2.0a e a F2.0b estão implementadas. As demais etapas F2 continuam pendentes: cadastro de itens/lojas, Missões/Histórias, certificados, preços privados, pedidos, estoque e carteira/transações em Nuques.
+- A F2.0a, F2.0b e F2.1 estão implementadas. As demais etapas F2 continuam pendentes: Missões/Histórias, certificados, concessões, cadastro de lojas/ofertas e preços por loja, pedidos, estoque e carteira/transações em Nuques.
 - F3/F4 não foram implementadas: calendário/grade reais, progressão, Taça, coleções com revelações graduais, cartas, jornal, missões, investigações e memórias. As rotas têm apenas estados vazios; não anunciam ações funcionais inexistentes.
 - A tabela `publications` prepara futuras publicações; sem editor, envio ou marcação de leitura. Se uma publicação for inserida por uma futura integração, a leitura atual já filtra destinatários/contexto, sem efeitos colaterais.
 - O jogador tem uma conta/um personagem. Não há seletor público de identidade. Contas MASTER administram os personagens e podem convidar outros Mestres; não precisam representar um personagem.
@@ -143,4 +149,4 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 
 A especificação completa das 15 oficinas foi comparada com a F0/F1. O [plano com matriz e contratos](docs/OFICINA_GERAL_PLANO.md) e o [backlog por fase, com dependências e testes](docs/BACKLOG_OFICINAS.md) ficam no repositório, com o inventário original preservado e os avanços registrados nas entregas. O planejamento mais recente organiza as próximas entregas em F2–F5 e prevalece sobre o resumo histórico F2–F4 acima.
 
-Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. A F2.0a e a F2.0b foram autorizadas e implementadas em branches/PRs próprias. A próxima fase é F2.1 — Itens; iniciar essa fase ou posteriores exige nova autorização.
+Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. A F2.0a, F2.0b e F2.1 foram autorizadas e implementadas em branches/PRs próprias. A próxima fase é F2.2a — autoria de Missões e Histórias Individuais; iniciar essa fase ou posteriores exige nova autorização.
