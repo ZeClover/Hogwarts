@@ -74,3 +74,8 @@ Mutações exigem origem exata, JSON (exceto upload) e CSRF da sessão. Autentic
 `/entrar`, `/ativar`, `/portal/inicio`, `/portal/hogwarts`, `/portal/hogsmeade`, `/portal/acervos`, `/portal/correio`, `/portal/perfil`, `/portal/mestre`, `/portal/local/:id` e `/portal/publicacao/:id`.
 
 Contêineres futuros: `/portal/calendario`, `/portal/avisos`, `/portal/colecoes`, `/portal/missoes`, `/portal/investigacoes`, `/portal/recordacoes`, `/portal/profeta`. `/portal/casas` exibe apenas os brasões, sem pontos inventados.
+
+
+## Evolução F2.0a
+
+A Oficina Geral/Biblioteca de Mídia acrescenta uma migração aditiva e políticas editoriais compartilhadas sem substituir o modelo acima. [Ver entidades, arquivos, rotas e limites da entrega F2.0a](F2_0A_ENTREGA.md).

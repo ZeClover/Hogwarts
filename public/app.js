@@ -1,3 +1,4 @@
+import { createWorkshop } from '/workshop.js';
 const root = document.querySelector('#root');
 const state = { session: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 let toastTimer;
@@ -22,6 +23,8 @@ const ico = (name, size=20) => `<svg width="${size}" height="${size}" viewBox="0
 const label = (left, right='1890–1891') => `<div class="subtop"><span class="eyebrow">${esc(left)}</span><span class="breadcrumbs">${esc(right)}</span></div>`;
 const empty = message => `<div class="vacant slim">${ico('star',30)}<span>${esc(message)}</span></div>`;
 const button = (title, page, icon='arrow', extra='') => `<button class="btn ghost ${extra}" data-go="${page}">${ico(icon,16)} ${esc(title)}</button>`;
+const workshop=createWorkshop({api,esc,ico,label,empty,button,state,render,navigate,toast});
+workshop.attach(root);
 function toast(message, error=false) {
   clearTimeout(toastTimer);
   const el=document.querySelector('#toast');el.textContent=message;el.className=error?'visible error':'visible';
@@ -49,6 +52,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  if(workshop.handles(state.page)){await workshop.load();return;}
   if(state.page==='/portal/mestre' && state.session?.role==='MASTER' && !state.view) state.admin=await api('/api/master/state',{preview:false});
   if(state.page.startsWith('/portal/local/')) state.detail=await api(`/api/locations/${state.page.split('/').pop()}`);
   if(state.page.startsWith('/portal/publicacao/')) state.detail=await api(`/api/publications/${state.page.split('/').pop()}`);
@@ -57,6 +61,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
+  if(!force&&!changed&&!state.dirty&&workshop.handles(state.page)){await workshop.poll();return;}
   if(state.session?.role==='MASTER' && !state.view && (force||!state.admin)) state.admin=await api('/api/master/state',{preview:false});
   if(force||changed&&!state.dirty){
     try {await loadPage();} catch {state.detail=null;}
@@ -70,7 +75,7 @@ function authPage() {
 function header() {
   const p=state.portal.character, isMaster=state.session.role==='MASTER'&&!state.view;
   const links=[['Início','inicio'],['Hogwarts','hogwarts'],['Hogsmeade','hogsmeade'],['Acervos','acervos'],['Correio','correio']];
-  return `<header class="top"><a class="brand" href="${pathWithView('/portal/inicio')}" data-go="/portal/inicio"><img src="/assets/hogwarts.webp" alt=""><div class="brand-title">Hogwarts <small>1890 · Arquivos Mágicos</small></div></a><nav class="navigation" aria-label="Principal">${links.map(([name,page])=>`<a href="${pathWithView('/portal/'+page)}" data-go="/portal/${page}" ${state.page==='/portal/'+page?'aria-current="page"':''}>${name}</a>`).join('')}</nav><div class="persona">${p?`<a class="persona-link" href="${pathWithView('/portal/perfil')}" data-go="/portal/perfil"><img src="${esc(p.crest)}" alt=""><span>${esc(p.name)}<small>${esc(p.houseName)}</small></span></a>`:`<a class="persona-link" href="/portal/mestre" data-go="/portal/mestre">${ico('shield',27)}<span>Mestre<small>Arquivos Mágicos</small></span></a>`}<button class="icon-button" data-action="logout" aria-label="Sair da conta" title="Sair">${ico('exit',19)}</button></div></header>${state.view?`<aside class="preview-bar"><span>${ico('eye',18)} Visualizando ${esc(p?.name)} · somente leitura</span><button class="btn ghost small" data-action="end-preview">Voltar ao Mestre</button></aside>`:isMaster?`<div class="master-bar"><a href="/portal/mestre" data-go="/portal/mestre">${ico('shield',15)} Central do Mestre</a><label>Visualizar como <select id="preview-select" aria-label="Visualizar como personagem"><option value="">Escolher personagem</option>${(state.admin?.characters??[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>`:''}`;
+  return `<header class="top"><a class="brand" href="${pathWithView('/portal/inicio')}" data-go="/portal/inicio"><img src="/assets/hogwarts.webp" alt=""><div class="brand-title">Hogwarts <small>1890 · Arquivos Mágicos</small></div></a><nav class="navigation" aria-label="Principal">${links.map(([name,page])=>`<a href="${pathWithView('/portal/'+page)}" data-go="/portal/${page}" ${state.page==='/portal/'+page?'aria-current="page"':''}>${name}</a>`).join('')}</nav><div class="persona">${p?`<a class="persona-link" href="${pathWithView('/portal/perfil')}" data-go="/portal/perfil"><img src="${esc(p.crest)}" alt=""><span>${esc(p.name)}<small>${esc(p.houseName)}</small></span></a>`:`<a class="persona-link" href="/portal/mestre" data-go="/portal/mestre">${ico('shield',27)}<span>Mestre<small>Arquivos Mágicos</small></span></a>`}<button class="icon-button" data-action="logout" aria-label="Sair da conta" title="Sair">${ico('exit',19)}</button></div></header>${state.view?`<aside class="preview-bar"><span>${ico('eye',18)} Visualizando ${esc(p?.name)} · somente leitura</span><button class="btn ghost small" data-action="end-preview">Voltar ao Mestre</button></aside>`:isMaster?`<div class="master-bar"><div class="admin-bar-links"><a href="/portal/mestre" data-go="/portal/mestre">${ico('shield',15)} Central da Sessão</a><a href="/portal/mestre/oficinas" data-go="/portal/mestre/oficinas">${ico('book',15)} Oficina Geral</a></div><label>Visualizar como <select id="preview-select" aria-label="Visualizar como personagem"><option value="">Escolher personagem</option>${(state.admin?.characters??[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>`:''}`;
 }
 function imgcard(title, caption, photo, target, icon='star', locked=false) {
   return `<a class="entry${locked?' locked':''}" href="${pathWithView(target)}" data-go="${target}" style="background-image:linear-gradient(0deg,#1010140f,#10101408),url('${photo}')"><span class="entry-symbol">${ico(icon,22)}</span>${locked?`<span class="card-lock">${ico('lock',13)} Fechada</span>`:''}<strong>${esc(title)}</strong><span>${esc(caption)}</span></a>`;
@@ -84,7 +89,7 @@ function school() {
   return `${label('VIDA ESCOLAR')}<h1 class="display">O Castelo de Hogwarts</h1><div class="tiles">${library?imgcard('Biblioteca','Acervo da escola',library.image,'/portal/local/'+library.id,'book'):''}${imgcard('Calendário','Aulas e eventos','/assets/hogwarts_saguão.webp','/portal/calendario','clock')}${imgcard('As Quatro Casas','Tradição e pertencimento','/assets/hogwarts_claustro.webp','/portal/casas','shield')}${imgcard('Quadros de Avisos','Comunicados','/assets/hogwarts_corredor_velas.webp','/portal/avisos','scroll')}</div>`;
 }
 function archives() {
-  return `${label('ARQUIVOS PESSOAIS')}<h1 class="display">Meus Acervos</h1><div class="tiles">${imgcard('Coleções','Descobertas e registros','/assets/biblioteca_hogwarts.webp','/portal/colecoes','star')}${imgcard('Diário de Missões','Histórias em andamento','/assets/hogwarts_escadarias.webp','/portal/missoes','scroll')}${imgcard('Investigações','Caderno coletivo','/assets/hogwarts_saguão.webp','/portal/investigacoes','book')}${imgcard('Recordações','Memórias e momentos','/assets/correio_pergaminhos.webp','/portal/recordacoes','quill')}</div>`;
+  return `${label('ARQUIVOS PESSOAIS')}<h1 class="display">Meus Acervos</h1>${button('Galeria de Imagens','/portal/midias','book')}<div class="tiles">${imgcard('Coleções','Descobertas e registros','/assets/biblioteca_hogwarts.webp','/portal/colecoes','star')}${imgcard('Diário de Missões','Histórias em andamento','/assets/hogwarts_escadarias.webp','/portal/missoes','scroll')}${imgcard('Investigações','Caderno coletivo','/assets/hogwarts_saguão.webp','/portal/investigacoes','book')}${imgcard('Recordações','Memórias e momentos','/assets/correio_pergaminhos.webp','/portal/recordacoes','quill')}</div>`;
 }
 function mast(image, kicker, title) {
   return `<section class="media-mast" style="--media:url('${image}')"><div><span class="eyebrow">${esc(kicker)}</span><h1>${esc(title)}</h1></div></section>`;
@@ -144,6 +149,7 @@ function auditLabel(action) {
   return ({BOOTSTRAP_INVITE:'Convite inicial criado',INVITE_ACCEPTED:'Convite aceito',INVITE_CREATED:'Convite criado',INVITE_REVOKED:'Convite revogado',REGION_ACCESS_UPDATED:'Acesso de região atualizado',LOCATION_ACCESS_UPDATED:'Visibilidade de local atualizada',SECRET_LOCATION_CREATED:'Local secreto criado',GROUP_UPDATED:'Grupo atualizado',CHARACTER_UPDATED:'Personagem atualizado',PROFILE_UPDATED:'Biografia atualizada',PHOTO_UPDATED:'Foto atualizada',PHOTO_REMOVED:'Foto removida',ACCOUNT_DISABLED:'Conta suspensa',ACCOUNT_ENABLED:'Conta reativada'})[action]??action;
 }
 function pageContent() {
+  if(workshop.handles(state.page))return workshop.page();
   const page=state.page.split('/')[2]??'inicio';
   if(page==='inicio')return home();
   if(page==='hogwarts')return school();
@@ -187,7 +193,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',()=>{state.dirty=true;});
+root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="preview"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}

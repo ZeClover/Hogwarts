@@ -1,4 +1,4 @@
-name: F0-F1 checks
+name: Hogwarts portal checks
 on:
   push:
   pull_request:

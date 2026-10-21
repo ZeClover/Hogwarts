@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer, type ServerResponse } from 'node:http';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { extname, join, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -10,36 +10,10 @@ import { HttpError, fail, token, digest, email, now, validPassword, hashPassword
   sessionFrom, createSession, clearSession, requireSession, requireMaster, viewerFor, mutationGuard, rateLimit, type Session } from './auth.ts';
 import { portalState, locationVisible, locationDTO, characterDTO, mediaVisible, publicationVisible } from './access.ts';
 
-const jsonTypes = new Set(['application/json']);
+import { bodyBuffer, jsonBody, send, text } from './http.ts';
+import { handleWorkshop } from './workshop.ts';
 const imageFiles = new Set(['loja_tomos_pergaminhos.webp','loja_olivaras.webp','loja_dedosdemel.webp','loja_pocoes.webp',
   'biblioteca_hogwarts.webp','hogwarts_corredor_velas.webp','hogwarts_escadarias.webp','antiquario_ou_oficina.webp']);
-async function bodyBuffer(req: IncomingMessage, limit: number): Promise<Buffer> {
-  if (Number(req.headers['content-length'] ?? 0) > limit) fail(413,'O arquivo ou formulário excede o limite permitido.');
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) fail(413,'O arquivo ou formulário excede o limite permitido.');
-    chunks.push(Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks);
-}
-async function jsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  if (!jsonTypes.has(req.headers['content-type']?.split(';')[0] ?? '')) fail(415,'Envie um formulário JSON.');
-  const bytes = await bodyBuffer(req, 32_768);
-  let parsed;
-  try { parsed = JSON.parse(bytes.toString('utf8')); } catch { fail(400,'Formulário inválido.'); }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) fail(400,'Formulário inválido.');
-  return parsed;
-}
-function send(res: ServerResponse, status: number, value: unknown) {
-  res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});
-  res.end(JSON.stringify(value));
-}
-function text(value: unknown, max: number, required = true): string {
-  if (typeof value !== 'string' || value.trim().length > max || (required && !value.trim())) fail(400,'Confira os campos informados.');
-  return value.trim();
-}
 function known(db: DB, table: 'characters' | 'access_groups' | 'regions' | 'locations', id: string): Row {
   // Table names are fixed internal enums, never request text.
   return one(db,`SELECT * FROM ${table} WHERE id=?`,id) ?? fail(404,'Registro não encontrado.');
@@ -151,6 +125,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
         const actor = requireSession(session);
         return send(res,200,{role:actor.role,csrf:actor.csrf,characterId:actor.characterId});
       }
+      if (await handleWorkshop(req,res,url,db,config,session)) return;
       if (path.startsWith('/api/master/')) {
         const actor = requireMaster(session);
         if (url.searchParams.has('view_as')) fail(403,'Saia da visualização para administrar.');
@@ -321,7 +296,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
       const staticFile=path.match(/^\/assets\/([^/]+\.webp)$/);
       let filename:string, mime:string;
       if(staticFile){filename=join(config.publicDir,'assets',basename(decodeURIComponent(staticFile[1]!)));mime='image/webp';res.setHeader('Cache-Control','public, max-age=3600');}
-      else if(['/style.css','/app.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
+      else if(['/style.css','/app.js','/workshop.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
       else if(path==='/'||path==='/ativar'||path==='/entrar'||/^\/portal(?:\/[a-zA-Z0-9-]+)*$/.test(path)){filename=join(config.publicDir,'index.html');mime='text/html; charset=utf-8';}
       else fail(404,'Página não encontrada.');
       const bytes=await readFile(filename).catch(()=>fail(404,'Arquivo não encontrado.'));

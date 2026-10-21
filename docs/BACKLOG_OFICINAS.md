@@ -1,6 +1,6 @@
 # Backlog de implementação — 15 oficinas
 
-**Todos os itens abaixo estão planejados, não iniciados.** A autorização atual é para análise/documentação. Não executar uma fase até o Mestre escolhê-la expressamente. A PR #1/F0/F1 e o Hub RPG permanecem preservados.
+**F2.0a autorizada e implementada nesta branch; demais fases não iniciadas.** OF13-01/02/03 e OF14-01/02 têm entrega aplicável à Biblioteca de Mídia, com os limites detalhados em [F2_0A_ENTREGA.md](F2_0A_ENTREGA.md). As outras 41 tarefas seguem planejadas. A PR #1/F0/F1 e o Hub RPG permanecem preservados.
 
 Fonte integral: `Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`, especificação incorporada v1.0 de 21/10/2026. [Matriz, contratos e arquitetura](OFICINA_GERAL_PLANO.md).
 
@@ -21,7 +21,7 @@ Uma tarefa de infraestrutura só entra junto a um uso real na interface. Uma ofi
 
 ## F2.0a — Oficina Geral, mídia mínima e políticas compartilhadas
 
-Épicos OF-13/OF-14 e núcleo editorial. Primeiro corte recomendado, ainda **aguardando autorização**. Entregar a Oficina Geral com um recurso administrativo de mídia realmente editável; não somente menu.
+Épicos OF-13/OF-14 e núcleo editorial. Primeiro corte **autorizado e implementado**; conferir escopo e evidências na entrega F2.0a. Entregar a Oficina Geral com um recurso administrativo de mídia realmente editável; não somente menu.
 
 | ID | Entidades / evolução | Editor + projeção do jogador | Regra / aceite específico | Teste de fluxo além de C1–C8 | Dependência |
 | --- | --- | --- | --- | --- | --- |
@@ -117,4 +117,4 @@ Este é o núcleo de prioridade narrativa. Os cortes permitem PRs menores, mas o
 - **Portão F4:** cinco editores, revelação/filas, sorteio transacional justo conforme configuração, correspondência com privacidade de rascunho e entrega manual, jornal global.
 - **Portão F5:** autoria de anuários/retrospectivas e contribuição coletiva sem vazamento, continuidade anual, biblioteca/template e operações de dados verificáveis.
 
-**A próxima fase não foi selecionada.** Concluir a documentação não inicia F2.0a ou qualquer outra tarefa. Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
+**F2.0a foi selecionada e entregue. A próxima fase F2.0b ainda não está autorizada.** Cada fase receberá autorização e PR próprio; cortes técnicos não apagam nenhum dos 15 módulos aprovados nem substituem seu aceite integral.
