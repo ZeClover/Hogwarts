@@ -1,3 +1,4 @@
+import {knownAcademicYear} from './calendar-model.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Config } from './config.ts';
@@ -37,8 +38,8 @@ function optional(db:DB,value:unknown,entity:'locations'|'workshop_files'|'npcs'
 }
 function validatePayload(db:DB,value:unknown):Payload{
   const p=record(value);fields(p,['title','summary','kind','academicYear','fileId','alt','npcId','locationId','hook']);
-  if(p.academicYear!=='1890–1891')fail(400,'Selecione o ano letivo disponível.');
-  return {title:text(p.title,120),summary:text(p.summary,3000,false),kind:text(p.kind,80,false),academicYear:p.academicYear,
+  if(!knownAcademicYear(db,p.academicYear))fail(400,'Selecione o ano letivo disponível.');
+  return {title:text(p.title,120),summary:text(p.summary,3000,false),kind:text(p.kind,80,false),academicYear:String(p.academicYear),
     fileId:optional(db,p.fileId,'workshop_files'),alt:text(p.alt,300,false),npcId:optional(db,p.npcId,'npcs'),locationId:optional(db,p.locationId,'locations'),hook:text(p.hook,2000,false)};
 }
 function validatePrivate(value:unknown):Internal{
@@ -85,7 +86,7 @@ function project(db:DB,viewer:Viewer,domain:Domain,row:Row,{draft=false,announce
     const e:Entry=JSON.parse(String(r.snapshot_json));return {id:e.id,kind:e.kind,title:e.title,text:e.text,...links(db,viewer,e),alt:e.fileId?e.alt:'',
       image:e.fileId?`/api/campaign/stories/${row.id}/entries/${r.entry_id}/image?stamp=${entryStamp(r)}${viewer.preview?'&view_as='+encodeURIComponent(viewer.characterId!):''}`:null};
   }):[];
-  return {id:row.id,title:p.title,summary:p.summary,kind:p.kind,academicYear:p.academicYear,hook:p.hook,...links(db,viewer,p),
+  return {id:row.id,title:p.title,summary:p.summary,kind:p.kind,academicYear:String(p.academicYear),hook:p.hook,...links(db,viewer,p),
     image:p.fileId?(imageURL??`/api/campaign/${announcement?'announcements':domain}/${row.id}/image?stamp=${imageStamp(row)}&context=${announcement?'announcement':'diary'}`):null,alt:p.fileId?p.alt:'',
     ...(announcement?{}:{archived:row.status!=='PUBLISHED',...(domain==='quests'?{state:row.operation_state==='CLOSED'?'CLOSED':enrollment?.state??null,...publicOperations(db,viewer,row)}:{entries:known})})};
 }

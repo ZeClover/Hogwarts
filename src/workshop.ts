@@ -1,3 +1,4 @@
+import {academicYears,calendarHeader} from './calendar-model.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile, writeFile, unlink, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
@@ -71,7 +72,7 @@ export async function handleWorkshop(req:IncomingMessage,res:ServerResponse,url:
   if(path.startsWith('/api/master/workshop/')){
     const actor=requireMaster(session);if(url.searchParams.has('view_as'))fail(403,'Saia da visualização para administrar.');
     if(path==='/api/master/workshop/context'&&method==='GET'){
-      send(res,200,{categories,presentations,approvedAssets:await approvedAssets(config),
+      send(res,200,{academicYears:academicYears(db),currentAcademicYear:calendarHeader(db).academicYear,categories,presentations,approvedAssets:await approvedAssets(config),
         authors:all(db,"SELECT id,email FROM users WHERE role='MASTER'"),
         characters:all(db,'SELECT id,name,house_id,school_year FROM characters'),houses:all(db,'SELECT id,name FROM houses'),
         groups:all(db,'SELECT id,name FROM access_groups'),regions:all(db,'SELECT id,title FROM regions'),locations:all(db,'SELECT id,title,region_id FROM locations'),
