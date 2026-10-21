@@ -12,9 +12,9 @@ export async function bodyBuffer(req: IncomingMessage, limit: number): Promise<B
   }
   return Buffer.concat(chunks);
 }
-export async function jsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+export async function jsonBody(req: IncomingMessage, limit=32_768): Promise<Record<string, unknown>> {
   if (req.headers['content-type']?.split(';')[0] !== 'application/json') fail(415,'Envie um formulário JSON.');
-  const bytes = await bodyBuffer(req, 32_768);
+  const bytes = await bodyBuffer(req, limit);
   let parsed;
   try { parsed = JSON.parse(bytes.toString('utf8')); } catch { fail(400,'Formulário inválido.'); }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) fail(400,'Formulário inválido.');
