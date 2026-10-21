@@ -1,6 +1,12 @@
 # Hogwarts 1890 — Arquivos Mágicos
 
-Portal privado para a campanha de 1890–1891. Primeira entrega **F0/F1**, independente do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
+Portal privado para a campanha de 1890–1891. Fundação **F0/F1** e **F2.0a — Oficina Geral/Biblioteca de Mídia**, independentes do Hub RPG. Preserva as fotografias, brasões, cores, salas comunais e organização do protótipo Visual V4 fornecido pelo Mestre.
+
+## Oficina Geral — F2.0a
+
+O Mestre já pode criar, editar, preparar, publicar, duplicar e arquivar registros na **Oficina Geral → Biblioteca de Mídia**, com upload/seleção V4, corte, metadados, notas privadas, destinatários, turmas, prévia e histórico. Jogadores consultam somente imagens liberadas em **Acervos → Galeria de Imagens**. Rascunhos e revisões publicadas são independentes.
+
+[Entrega F2.0a: uso, rotas, migração, capturas, verificações e limites](docs/F2_0A_ENTREGA.md). A PR da fundação permanece preservada; esta fase tem sua própria branch/PR. Os editores de NPCs, Itens, Lojas e Missões continuam nas próximas etapas.
 
 ## O que está pronto
 
@@ -120,7 +126,7 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 ## Limitações e próximas fases
 
 - O mapa restaurado de Hogsmeade é **provisório**. O Mestre deve aprovar a qualidade/posições ou fornecer uma captura limpa fiel ao jogo. Há aviso no painel administrativo.
-- F2 não foi implementada: Oficina completa, cadastro de artigos, preços privados, pedidos, aprovação, estoque e carteira/transações em Nuques.
+- A F2.0a está implementada. As demais etapas F2 continuam pendentes: NPCs, cadastro de itens/lojas, Missões/Histórias, certificados, preços privados, pedidos, estoque e carteira/transações em Nuques.
 - F3/F4 não foram implementadas: calendário/grade reais, progressão, Taça, coleções com revelações graduais, cartas, jornal, missões, investigações e memórias. As rotas têm apenas estados vazios; não anunciam ações funcionais inexistentes.
 - A tabela `publications` prepara futuras publicações; sem editor, envio ou marcação de leitura. Se uma publicação for inserida por uma futura integração, a leitura atual já filtra destinatários/contexto, sem efeitos colaterais.
 - O jogador tem uma conta/um personagem. Não há seletor público de identidade. Contas MASTER administram os personagens e podem convidar outros Mestres; não precisam representar um personagem.
@@ -131,4 +137,4 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 
 A especificação completa das 15 oficinas foi comparada com a F0/F1. O [plano com matriz e contratos](docs/OFICINA_GERAL_PLANO.md) e o [backlog por fase, com dependências e testes](docs/BACKLOG_OFICINAS.md) ficam nesta branch documental separada. O planejamento mais recente organiza as próximas entregas em F2–F5 e prevalece sobre o resumo histórico F2–F4 acima.
 
-Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada e nenhuma nova fase está autorizada.
+Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. A F2.0a foi autorizada e implementada nesta branch; iniciar F2.0b ou fases seguintes exige nova autorização.
