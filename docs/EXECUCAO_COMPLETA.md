@@ -9,8 +9,8 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F2.2c — certificados e concessões | Entregue, PR #7 |
 | F2.3 — lojas/ofertas/mapas | Entregue, PR #8 |
 | F2.4 — carteira, pedidos e recibos | Entregue, PR #9 |
-| F3.0 — livros/aulas | Em implementação |
-| F3.1 — anos, calendário e grade | Autorizada |
+| F3.0 — livros/aulas | Entregue, PR #10 |
+| F3.1 — anos, calendário e grade | Em implementação |
 | F3.2 — murais/propostas | Autorizada |
 | F3.3 — Taça das Casas | Autorizada |
 | F4.0a — coleções e revelações | Autorizada |
