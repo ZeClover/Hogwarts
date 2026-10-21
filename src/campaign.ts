@@ -415,3 +415,5 @@ export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:
   }
   fail(404,'Recurso não encontrado.');
 }
+
+export function campaignAnnouncementReference(db:DB,viewer:Viewer,id:string){const row=one(db,'SELECT * FROM quests WHERE id=?',id);if(!row||!canAnnounce(db,viewer,row))return null;return {id:row.id,title:payload(row,true).title};}
