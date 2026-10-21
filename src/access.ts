@@ -1,6 +1,7 @@
 import type { DB, Row } from './db.ts';
 import { all, one } from './db.ts';
 import type { Viewer } from './auth.ts';
+import {policyAllows,type Policy} from './editorial.ts';
 
 export function granted(db: DB, viewer: Viewer, type: string, id: string) {
   if (!viewer.characterId) return false;
@@ -9,12 +10,12 @@ export function granted(db: DB, viewer: Viewer, type: string, id: string) {
   type,id,viewer.characterId,viewer.characterId);
 }
 export function regionVisible(db: DB, viewer: Viewer, region: Row) {
-  return viewer.role === 'MASTER' || (!!region.is_open && (region.audience === 'ALL' || granted(db,viewer,'REGION',String(region.id))));
+  return viewer.role === 'MASTER' || ((!region.editorial_policy_json||policyAllows(db,viewer,JSON.parse(String(region.editorial_policy_json)) as Policy)) && !!region.is_open && (region.audience === 'ALL' || granted(db,viewer,'REGION',String(region.id))));
 }
 export function locationVisible(db: DB, viewer: Viewer, location: Row) {
   if (viewer.role === 'MASTER') return true;
   const region = one(db,'SELECT * FROM regions WHERE id=?',String(location.region_id));
-  return !!region && regionVisible(db,viewer,region) && !!location.enabled &&
+  return !!region && regionVisible(db,viewer,region) && !!location.enabled && (!location.editorial_policy_json||policyAllows(db,viewer,JSON.parse(String(location.editorial_policy_json)) as Policy)) &&
     (granted(db,viewer,'LOCATION',String(location.id)) || (!location.is_secret && location.audience === 'ALL'));
 }
 export function characterDTO(db: DB, id: string) {
@@ -26,7 +27,7 @@ export function characterDTO(db: DB, id: string) {
     crest: `/assets/${row.crest}`, room: `/assets/${row.room}` };
 }
 export function locationDTO(row: Row) {
-  return { id: row.id, title: row.title, regionId: row.region_id, kind: row.kind, image: `/assets/${row.image}`, x: row.x, y: row.y };
+  return { id: row.id, title: row.title, regionId: row.region_id, kind: row.kind, image: row.file_id?`/api/content/places/${row.id}/image`:`/assets/${row.image}`, x: row.x, y: row.y };
 }
 export function publicationVisible(db: DB, viewer: Viewer, row: Row) {
   if (row.status !== 'PUBLISHED' || !row.published_at) return false;
@@ -46,7 +47,7 @@ export function mediaVisible(db: DB, viewer: Viewer, media: Row) {
   return all(db,'SELECT * FROM publications WHERE media_id=?',String(media.id)).some(p=>publicationVisible(db,viewer,p));
 }
 export function portalState(db: DB, viewer: Viewer) {
-  const regions = all(db,'SELECT * FROM regions').map(r=>({ id:r.id, title:r.title, accessible:regionVisible(db,viewer,r) }));
+  const regions = all(db,'SELECT * FROM regions').filter(r=>r.id==='hogwarts'||r.id==='hogsmeade'||regionVisible(db,viewer,r)).map(r=>({ id:r.id, title:r.title, accessible:regionVisible(db,viewer,r) }));
   return {
     role: viewer.role, preview: viewer.preview,
     character: viewer.characterId ? characterDTO(db,viewer.characterId) : null,
