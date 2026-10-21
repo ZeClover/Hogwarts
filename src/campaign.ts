@@ -8,12 +8,19 @@ import { exists, expected, validatePolicy, policyAllows, imageStamp, type Policy
 import { locationVisible } from './access.ts';
 import { npcReference } from './npcs.ts';
 import { renderImage } from './workshop.ts';
+import { enqueue, registerEvent } from './events.ts';
 
 type Domain='quests'|'stories';
 type Payload={title:string;summary:string;kind:string;academicYear:string;fileId:string|null;alt:string;npcId:string|null;locationId:string|null;hook:string};
 type Internal={synopsis:string;importance:string;releaseConditions:string;notes:string};
 type Entry={id:string;kind:string;title:string;text:string;npcId:string|null;locationId:string|null;fileId:string|null;alt:string};
-type Published=Payload&{entries?:Entry[]};
+type Objective={id:string;title:string;description:string;optional:boolean;internalOnly:boolean;policy:Policy};
+type Clue=Entry&{policy:Policy};
+type Published=Payload&{entries?:Entry[];objectives?:Objective[];clues?:Clue[]};
+const definitions=(db:DB,id:string,kind:'objectives'|'clues')=>all(db,`SELECT * FROM quest_${kind} WHERE quest_id=? ORDER BY position,id`,id);
+const preparedDefinitions=(db:DB,id:string,kind:'objectives'|'clues')=>definitions(db,id,kind).map(r=>({id:String(r.id),...JSON.parse(String(r.draft_json))}));
+function operationSnapshot(db:DB,row:Row){return {operationState:row.operation_state,objectives:definitions(db,String(row.id),'objectives'),clues:definitions(db,String(row.id),'clues'),
+  progress:all(db,'SELECT * FROM quest_objective_progress WHERE quest_id=?',String(row.id)),clueReveals:all(db,'SELECT * FROM quest_clue_reveals WHERE quest_id=?',String(row.id)),outcomes:all(db,'SELECT * FROM quest_outcomes WHERE quest_id=? ORDER BY version,id',String(row.id))};}
 const table=(domain:Domain)=>domain==='quests'?'quests':'personal_story_arcs';
 const revisionTable=(domain:Domain)=>domain==='quests'?'quest_revisions':'story_revisions';
 const get=(db:DB,domain:Domain,id:string)=>one(db,`SELECT * FROM ${table(domain)} WHERE id=?`,id)??fail(404,'Registro não encontrado.');
@@ -39,11 +46,11 @@ function validatePrivate(value:unknown):Internal{
   return {synopsis:text(p.synopsis,4000,false),importance:text(p.importance,200,false),releaseConditions:text(p.releaseConditions,2000,false),notes:text(p.notes,2000,false)};
 }
 function ready(p:{fileId:string|null;alt:string}){if(p.fileId&&!p.alt)fail(422,'Preencha o texto alternativo de cada imagem antes de preparar ou publicar.');}
-function composed(db:DB,domain:Domain,row:Row):Published{return {...payload(row),...(domain==='stories'?{entries:entries(db,String(row.id))}:{})};}
-function pending(db:DB,domain:Domain,row:Row){return !!row.published_json&&(JSON.stringify(composed(db,domain,row))!==row.published_json||row.draft_policy_json!==row.published_policy_json);}
+function composed(db:DB,domain:Domain,row:Row):Published{return {...payload(row),...(domain==='stories'?{entries:entries(db,String(row.id))}:{objectives:preparedDefinitions(db,String(row.id),'objectives'),clues:preparedDefinitions(db,String(row.id),'clues')})};}
+function pending(db:DB,domain:Domain,row:Row){return !!row.published_json&&(JSON.stringify(composed(db,domain,row))!==JSON.stringify({...payload(row,true),...(domain==='quests'?{objectives:payload(row,true).objectives??[],clues:payload(row,true).clues??[]}:{})})||row.draft_policy_json!==row.published_policy_json);}
 function snapshot(db:DB,domain:Domain,row:Row){return {status:row.status,version:row.version,payload:payload(row),policy:policy(row),private:privateData(row),
   published:row.published_json?payload(row,true):null,publishedPolicy:row.published_policy_json?policy(row,true):null,publishedRevision:row.published_revision,
-  ...(domain==='quests'?{participants:participants(db,String(row.id))}:{protagonistId:row.protagonist_id,accessActive:!!row.access_active,releasedAt:row.released_at,
+  ...(domain==='quests'?{participants:participants(db,String(row.id)),...operationSnapshot(db,row)}:{protagonistId:row.protagonist_id,accessActive:!!row.access_active,releasedAt:row.released_at,
     entries:entryRows(db,String(row.id)).map(r=>({id:r.id,position:r.position,payload:JSON.parse(String(r.draft_json)),privateNotes:r.private_notes})),
     reveals:reveals(db,String(row.id)).map(r=>({...r,snapshot:JSON.parse(String(r.snapshot_json)),snapshot_json:undefined}))})};}
 function revision(db:DB,domain:Domain,row:Row,actor:Session,action:string){
@@ -54,7 +61,7 @@ function adminDTO(db:DB,domain:Domain,row:Row){
   const p=payload(row),file=p.fileId?one(db,'SELECT id,origin_asset FROM workshop_files WHERE id=?',p.fileId):null;
   return {id:row.id,status:row.status,version:row.version,payload:p,policy:policy(row),private:privateData(row),publishedRevision:row.published_revision,
     hasUnpublishedChanges:pending(db,domain,row),sourceImage:file?{image:`/api/master/workshop/files/${file.id}`,originalAlreadyPublic:!!file.origin_asset}:null,
-    ...(domain==='quests'?{participants:participants(db,String(row.id))}:{protagonistId:row.protagonist_id,protagonistLocked:row.released_at!==null,accessActive:!!row.access_active,
+    ...(domain==='quests'?{participants:participants(db,String(row.id)),...operationSnapshot(db,row)}:{protagonistId:row.protagonist_id,protagonistLocked:row.released_at!==null,accessActive:!!row.access_active,
       entries:entryRows(db,String(row.id)).map(r=>({id:r.id,payload:JSON.parse(String(r.draft_json)),privateNotes:r.private_notes})),
       publishedEntryIds:row.published_json?(payload(row,true).entries??[]).map(e=>e.id):[],
       reveals:reveals(db,String(row.id)).map(r=>({entryId:r.entry_id,title:JSON.parse(String(r.snapshot_json)).title,active:!!r.active,sourceRevision:r.source_revision}))})};
@@ -62,7 +69,7 @@ function adminDTO(db:DB,domain:Domain,row:Row){
 function eligible(db:DB,viewer:Viewer,domain:Domain,row:Row,draft=false){
   return !!viewer.characterId&&(domain==='quests'||row.protagonist_id===viewer.characterId)&&policyAllows(db,viewer,policy(row,!draft));
 }
-function canAnnounce(db:DB,viewer:Viewer,row:Row){return row.status==='PUBLISHED'&&!!row.published_json&&eligible(db,viewer,'quests',row);}
+function canAnnounce(db:DB,viewer:Viewer,row:Row){return row.status==='PUBLISHED'&&row.operation_state!=='CLOSED'&&!!row.published_json&&eligible(db,viewer,'quests',row);}
 function canRead(db:DB,viewer:Viewer,domain:Domain,row:Row){
   if(!row.published_json||!eligible(db,viewer,domain,row))return false;
   return domain==='stories'?!!row.access_active:!!one(db,'SELECT 1 FROM quest_participants WHERE quest_id=? AND character_id=? AND active=1',String(row.id),viewer.characterId!);
@@ -80,7 +87,7 @@ function project(db:DB,viewer:Viewer,domain:Domain,row:Row,{draft=false,announce
   }):[];
   return {id:row.id,title:p.title,summary:p.summary,kind:p.kind,academicYear:p.academicYear,hook:p.hook,...links(db,viewer,p),
     image:p.fileId?(imageURL??`/api/campaign/${announcement?'announcements':domain}/${row.id}/image?stamp=${imageStamp(row)}&context=${announcement?'announcement':'diary'}`):null,alt:p.fileId?p.alt:'',
-    ...(announcement?{}:{archived:row.status!=='PUBLISHED',...(domain==='quests'?{state:enrollment?.state??null}:{entries:known})})};
+    ...(announcement?{}:{archived:row.status!=='PUBLISHED',...(domain==='quests'?{state:row.operation_state==='CLOSED'?'CLOSED':enrollment?.state??null,...publicOperations(db,viewer,row)}:{entries:known})})};
 }
 function create(db:DB,domain:Domain,actor:Session,data:Record<string,unknown>){
   fields(data,domain==='quests'?['payload','policy','private']:['payload','policy','private','protagonistId']);
@@ -117,7 +124,7 @@ function command(db:DB,domain:Domain,actor:Session,id:string,action:string,data:
     }else if(action==='restore'){
       if(before.status!=='ARCHIVED')fail(409,'Somente um registro arquivado pode ser restaurado.');db.prepare(`UPDATE ${table(domain)} SET status='DRAFT' WHERE id=?`).run(id);
     }else if(action==='prepare'||action==='publish'){
-      if(before.status==='ARCHIVED')fail(409,'Restaure o registro antes de publicar.');const p=composed(db,domain,before);ready(p);(p.entries??[]).forEach(ready);
+      if(before.status==='ARCHIVED')fail(409,'Restaure o registro antes de publicar.');const p=composed(db,domain,before);ready(p);(p.entries??[]).forEach(ready);(p.clues??[]).forEach(ready);
       if(action==='prepare'){
         if(before.status==='PUBLISHED')fail(409,'O registro já possui uma revisão publicada.');db.prepare(`UPDATE ${table(domain)} SET status='PREPARED' WHERE id=?`).run(id);
       }else db.prepare(`UPDATE ${table(domain)} SET status='PUBLISHED',published_json=?,published_policy_json=draft_policy_json,published_revision=version+1,published_at=? WHERE id=?`).run(JSON.stringify(p),now(),id);
@@ -130,6 +137,7 @@ function duplicate(db:DB,domain:Domain,actor:Session,id:string,data:Record<strin
     const before=get(db,domain,id);expected(before,data.version);const copyId=randomUUID(),p=payload(before);p.title=`${p.title.slice(0,110)} — cópia`;
     db.prepare(`INSERT INTO ${table(domain)}(id,owner_user_id,draft_json,draft_policy_json,private_json${domain==='stories'?',protagonist_id':''}) VALUES(?,?,?,?,?${domain==='stories'?',?':''})`)
       .run(copyId,actor.userId,JSON.stringify(p),String(before.draft_policy_json),String(before.private_json),...(domain==='stories'?[String(before.protagonist_id)]:[]));
+    if(domain==='quests')for(const kind of ['objectives','clues'] as const)for(const e of definitions(db,id,kind))db.prepare(`INSERT INTO quest_${kind}(id,quest_id,position,draft_json,private_notes) VALUES(?,?,?,?,?)`).run(randomUUID(),copyId,Number(e.position),String(e.draft_json),String(e.private_notes));
     if(domain==='stories')for(const e of entryRows(db,id))db.prepare('INSERT INTO personal_story_entries(id,arc_id,position,draft_json,private_notes) VALUES(?,?,?,?,?)').run(randomUUID(),copyId,Number(e.position),String(e.draft_json),String(e.private_notes));
     const row=get(db,domain,copyId);revision(db,domain,row,actor,'DUPLICATED');return adminDTO(db,domain,row);
   });
@@ -138,6 +146,7 @@ function questAccess(db:DB,actor:Session,id:string,action:string,data:Record<str
   fields(data,['version','characters']);const characters=stringIds(data.characters);if(!characters.length)fail(400,'Selecione participantes.');characters.forEach(c=>exists(db,'characters',c));
   return transaction(db,()=>{
     const before=get(db,'quests',id);expected(before,data.version);
+    if(action!=='revoke'&&before.operation_state==='CLOSED')fail(409,'Reabra a missão antes de liberar ou iniciar participantes.');
     if(action!=='revoke'&&before.status!=='PUBLISHED')fail(409,'Publique a missão antes desta ação.');
     for(const characterId of characters){
       const viewer:Viewer={userId:actor.userId,role:'PLAYER',characterId,preview:true};
@@ -213,6 +222,7 @@ function list(db:DB,domain:Domain,url:URL,viewer?:Viewer,announcement=false){
   const q=(url.searchParams.get('q')??'').trim().toLocaleLowerCase('pt-BR').slice(0,120),status=url.searchParams.get('status'),kind=url.searchParams.get('kind');
   const rows=all(db,`SELECT * FROM ${table(domain)} ORDER BY updated_at DESC,id`).flatMap(row=>{
     if(viewer&&!(announcement?canAnnounce(db,viewer,row):canRead(db,viewer,domain,row)))return [];
+    if(!viewer&&url.searchParams.get('active')==='1'&&(domain!=='quests'||row.operation_state==='CLOSED'||!participants(db,String(row.id)).some(p=>p.active&&p.state==='IN_PROGRESS')))return [];
     const p=payload(row,!!viewer),publicValue=viewer?project(db,viewer,domain,row,{announcement}):null,value=publicValue??adminDTO(db,domain,row);
     const known:Array<{title:string;text:string}>=publicValue&&'entries' in publicValue&&Array.isArray(publicValue.entries)?publicValue.entries:[];
     if((q&&!`${p.title} ${p.summary} ${p.hook} ${known.map(e=>e.title+' '+e.text).join(' ')}`.toLocaleLowerCase('pt-BR').includes(q))||(!viewer&&status&&row.status!==status)||(kind&&p.kind!==kind))return [];
@@ -222,6 +232,114 @@ function list(db:DB,domain:Domain,url:URL,viewer?:Viewer,announcement=false){
   return {items:rows.slice((page-1)*12,page*12),total:rows.length,page,pageSize:12};
 }
 async function cover(db:DB,config:Config,res:ServerResponse,p:{fileId:string|null}){if(!p.fileId)fail(404,'Imagem indisponível.');await renderImage(db,config,res,{fileId:p.fileId,crop:{x:0,y:0,width:100,height:100}},false);}
+
+const objectiveStates=['HIDDEN','REVEALED','IN_PROGRESS','COMPLETED','FAILED','CANCELLED'];
+function publishedDefinition(row:Row,kind:'objectives'|'clues',id:string){return (payload(row,true)[kind]??[]).find(e=>e.id===id);}
+function clueRecord(db:DB,viewer:Viewer,row:Row,clueId:string){
+  if(!canRead(db,viewer,'quests',row))return null;
+  const known=one(db,'SELECT * FROM quest_clue_reveals WHERE quest_id=? AND clue_id=? AND character_id=? AND active=1',String(row.id),clueId,viewer.characterId!);
+  if(!known)return null;const saved:Clue=JSON.parse(String(known.snapshot_json)),current=publishedDefinition(row,'clues',clueId) as Clue|undefined;
+  return policyAllows(db,viewer,current?.policy??saved.policy)?{row:known,saved}:null;
+}
+function publicOperations(db:DB,viewer:Viewer,row:Row){
+  if(!canRead(db,viewer,'quests',row))return {objectives:[],clues:[],outcomes:[]};
+  const objectives=all(db,"SELECT * FROM quest_objective_progress WHERE quest_id=? AND character_id=? AND state<>'HIDDEN' ORDER BY objective_id",String(row.id),viewer.characterId!).flatMap(progress=>{
+    const saved:Objective=JSON.parse(String(progress.snapshot_json)),current=publishedDefinition(row,'objectives',String(progress.objective_id)) as Objective|undefined;
+    if((current?.internalOnly??saved.internalOnly)||!policyAllows(db,viewer,current?.policy??saved.policy))return [];
+    return [{id:progress.objective_id,title:saved.title,description:saved.description,optional:saved.optional,state:progress.state}];
+  });
+  const clues=all(db,'SELECT clue_id FROM quest_clue_reveals WHERE quest_id=? AND character_id=? AND active=1 ORDER BY clue_id',String(row.id),viewer.characterId!).flatMap(r=>{
+    const known=clueRecord(db,viewer,row,String(r.clue_id));if(!known)return [];const c=known.saved;
+    return [{id:c.id,title:c.title,text:c.text,...links(db,viewer,c),alt:c.fileId?c.alt:'',image:c.fileId?`/api/campaign/quests/${row.id}/clues/${c.id}/image?stamp=${digest(String(known.row.snapshot_json)).slice(0,20)}`:null}];
+  });
+  const outcomes=all(db,'SELECT * FROM quest_outcomes WHERE quest_id=? ORDER BY version,id',String(row.id)).filter(r=>(JSON.parse(String(r.characters_json)) as string[]).includes(viewer.characterId!)).map(r=>({id:r.id,...JSON.parse(String(r.public_json)) as {result:string;epilogue:string;date:string}}));
+  const order=(kind:'objectives'|'clues',id:unknown)=>{const index=(payload(row,true)[kind]??[]).findIndex(e=>e.id===id);return index<0?1_000_000:index;};
+  objectives.sort((a,b)=>order('objectives',a.id)-order('objectives',b.id));clues.sort((a,b)=>order('clues',a.id)-order('clues',b.id));
+  return {objectives,clues,outcomes};
+}
+function saveDefinition(db:DB,actor:Session,id:string,kind:'objectives'|'clues',action:string,data:Record<string,unknown>){
+  fields(data,action==='reorder'?['version','ids']:action==='remove'?['version','definitionId']:['version','definitionId','payload','privateNotes']);
+  return transaction(db,()=>{
+    const before=get(db,'quests',id);expected(before,data.version);if(before.status==='ARCHIVED')fail(409,'Restaure a missão para editar.');
+    const rows=definitions(db,id,kind);
+    if(action==='reorder'){
+      const ids=stringIds(data.ids);if(ids.length!==(data.ids as unknown[]).length||ids.length!==rows.length||ids.some(value=>!rows.some(r=>r.id===value)))fail(400,'Envie a ordem completa sem repetições.');
+      ids.forEach((value,index)=>db.prepare(`UPDATE quest_${kind} SET position=? WHERE id=? AND quest_id=?`).run(index,value,id));
+    }else{
+      const definitionId=data.definitionId===null?randomUUID():text(data.definitionId,100),old=rows.find(r=>r.id===definitionId);
+      if((action==='remove'||data.definitionId!==null)&&!old)fail(404,'Registro não encontrado.');
+      if(action==='remove')db.prepare(`DELETE FROM quest_${kind} WHERE quest_id=? AND id=?`).run(id,definitionId);
+      else{
+        const p=record(data.payload);let content:Record<string,unknown>;
+        if(kind==='objectives'){
+          fields(p,['title','description','optional','internalOnly','policy']);if(typeof p.optional!=='boolean'||typeof p.internalOnly!=='boolean')fail(400,'Confira as opções do objetivo.');
+          content={title:text(p.title,120),description:text(p.description,2000,false),optional:p.optional,internalOnly:p.internalOnly,policy:validatePolicy(db,p.policy)};
+        }else{
+          fields(p,['title','text','fileId','alt','npcId','locationId','policy']);content={kind:'REVELATION',title:text(p.title,120),text:text(p.text,4000),fileId:optional(db,p.fileId,'workshop_files'),alt:text(p.alt,300,false),npcId:optional(db,p.npcId,'npcs'),locationId:optional(db,p.locationId,'locations'),policy:validatePolicy(db,p.policy)};
+        }
+        const notes=text(data.privateNotes??'',2000,false);if(!old&&rows.length>=50)fail(400,'Use até 50 registros de cada tipo por missão.');
+        if(old)db.prepare(`UPDATE quest_${kind} SET draft_json=?,private_notes=? WHERE quest_id=? AND id=?`).run(JSON.stringify(content),notes,id,definitionId);
+        else db.prepare(`INSERT INTO quest_${kind}(id,quest_id,position,draft_json,private_notes) VALUES(?,?,?,?,?)`).run(definitionId,id,rows.length?Math.max(...rows.map(r=>Number(r.position)))+1:0,JSON.stringify(content),notes);
+      }
+    }
+    db.prepare("UPDATE quests SET status=CASE WHEN status='PREPARED' THEN 'DRAFT' ELSE status END WHERE id=?").run(id);bump(db,'quests',id);const row=get(db,'quests',id);revision(db,'quests',row,actor,`${kind.toUpperCase()}_${action.toUpperCase()}`);return adminDTO(db,'quests',row);
+  });
+}
+function updateObjective(db:DB,actor:Session,id:string,data:Record<string,unknown>){
+  fields(data,['version','objectiveId','characters','state']);const objectiveId=text(data.objectiveId,100),characters=stringIds(data.characters),state=text(data.state,30);
+  if(!characters.length||!objectiveStates.includes(state))fail(400,'Selecione personagens e um estado válido.');characters.forEach(c=>exists(db,'characters',c));
+  return transaction(db,()=>{
+    const before=get(db,'quests',id);expected(before,data.version);if((before.status!=='PUBLISHED'||before.operation_state==='CLOSED')&&state!=='HIDDEN')fail(409,'A missão deve estar publicada e aberta para atualizar progresso.');
+    const definition=before.published_json?publishedDefinition(before,'objectives',objectiveId) as Objective|undefined:undefined;
+    for(const characterId of characters){
+      const viewer:Viewer={userId:actor.userId,role:'PLAYER',characterId,preview:true};
+      if(state!=='HIDDEN'&&(!definition||!canRead(db,viewer,'quests',before)||!policyAllows(db,viewer,definition.policy)))fail(422,'Um destinatário não pode consultar este objetivo.');
+    }
+    for(const character of characters){
+      if(state==='HIDDEN')db.prepare("UPDATE quest_objective_progress SET state='HIDDEN',actor_id=? WHERE quest_id=? AND objective_id=? AND character_id=?").run(actor.userId,id,objectiveId,character);
+      else db.prepare(`INSERT INTO quest_objective_progress(quest_id,objective_id,character_id,state,snapshot_json,source_revision,actor_id) VALUES(?,?,?,?,?,?,?)
+        ON CONFLICT(quest_id,objective_id,character_id) DO UPDATE SET state=excluded.state,snapshot_json=excluded.snapshot_json,source_revision=excluded.source_revision,actor_id=excluded.actor_id`).run(id,objectiveId,character,state,JSON.stringify(definition),Number(before.published_revision),actor.userId);
+    }
+    bump(db,'quests',id);const row=get(db,'quests',id);revision(db,'quests',row,actor,'OBJECTIVE_UPDATED');return adminDTO(db,'quests',row);
+  });
+}
+function revealClue(db:DB,actor:Session,id:string,revoke:boolean,data:Record<string,unknown>){
+  fields(data,revoke?['version','clueId','characters']:['version','clueId','characters','presentation']);const clueId=text(data.clueId,100),characters=stringIds(data.characters);
+  if(!characters.length||(!revoke&&!['ANIMATED','SILENT'].includes(String(data.presentation))))fail(400,'Selecione destinatários e apresentação.');characters.forEach(c=>exists(db,'characters',c));
+  return transaction(db,()=>{
+    const before=get(db,'quests',id);expected(before,data.version);const clue=before.published_json?publishedDefinition(before,'clues',clueId) as Clue|undefined:undefined;
+    if(!revoke){if(before.status!=='PUBLISHED'||before.operation_state==='CLOSED'||!clue)fail(409,'Publique a pista em uma missão aberta.');ready(clue);
+      for(const characterId of characters){const viewer:Viewer={userId:actor.userId,role:'PLAYER',characterId,preview:true};if(!canRead(db,viewer,'quests',before)||!policyAllows(db,viewer,clue.policy))fail(422,'Um destinatário não pode receber esta pista.');}}
+    for(const character of characters){
+      if(revoke)db.prepare('UPDATE quest_clue_reveals SET active=0,actor_id=? WHERE quest_id=? AND clue_id=? AND character_id=?').run(actor.userId,id,clueId,character);
+      else{const eventId=enqueue(db,character,'QUEST_CLUE',id,clueId,String(data.presentation));db.prepare(`INSERT INTO quest_clue_reveals(quest_id,clue_id,character_id,snapshot_json,source_revision,actor_id,event_id) VALUES(?,?,?,?,?,?,?)
+        ON CONFLICT(quest_id,clue_id,character_id) DO UPDATE SET active=1,snapshot_json=excluded.snapshot_json,source_revision=excluded.source_revision,actor_id=excluded.actor_id,event_id=excluded.event_id`)
+          .run(id,clueId,character,JSON.stringify(clue),Number(before.published_revision),actor.userId,eventId);}
+    }
+    bump(db,'quests',id);const row=get(db,'quests',id);revision(db,'quests',row,actor,revoke?'CLUE_REVOKED':'CLUE_REVEALED');return adminDTO(db,'quests',row);
+  });
+}
+function outcomeCommand(db:DB,actor:Session,id:string,reopen:boolean,data:Record<string,unknown>){
+  fields(data,reopen?['version','reason']:['version','result','epilogue','date','privateNotes']);
+  return transaction(db,()=>{
+    const before=get(db,'quests',id);expected(before,data.version);if(before.status!=='PUBLISHED')fail(409,'Publique/restaure a missão antes desta operação.');
+    if(reopen){if(before.operation_state!=='CLOSED')fail(409,'A missão não está encerrada.');const reason=text(data.reason,2000);db.prepare("UPDATE quests SET operation_state='OPEN' WHERE id=?").run(id);audit(db,actor.userId,'QUEST_REOPEN_REASON','QUEST',id,{reason});}
+    else{
+      if(before.operation_state==='CLOSED')fail(409,'A missão já está encerrada.');if(!['SUCCESS','PARTIAL_SUCCESS','FAILURE'].includes(String(data.result)))fail(400,'Escolha o desfecho.');
+      const members=participants(db,id).filter(m=>!!m.active&&canRead(db,{userId:actor.userId,role:'PLAYER',characterId:String(m.character_id),preview:true},'quests',before));
+      if(!members.some(m=>m.state==='IN_PROGRESS'))fail(409,'Inicie a missão para pelo menos um participante antes de encerrar.');
+      const content={result:String(data.result),epilogue:text(data.epilogue,4000),date:text(data.date??'',100,false)},notes=text(data.privateNotes??'',2000,false);
+      db.prepare('INSERT INTO quest_outcomes(id,quest_id,version,actor_id,public_json,private_notes,characters_json) VALUES(?,?,?,?,?,?,?)').run(randomUUID(),id,Number(before.version)+1,actor.userId,JSON.stringify(content),notes,JSON.stringify(members.map(m=>m.character_id)));
+      db.prepare("UPDATE quests SET operation_state='CLOSED' WHERE id=?").run(id);
+    }
+    bump(db,'quests',id);const row=get(db,'quests',id);revision(db,'quests',row,actor,reopen?'REOPENED':'CLOSED');return adminDTO(db,'quests',row);
+  });
+}
+registerEvent('QUEST_CLUE',(db,viewer,event)=>{
+  const row=one(db,'SELECT * FROM quests WHERE id=?',String(event.resource_id));if(!row)return null;const known=clueRecord(db,viewer,row,String(event.fragment_id));
+  return known&&known.row.event_id===event.id?{title:known.saved.title,text:known.saved.text,href:`/portal/missoes/grupo/${row.id}`}:null;
+});
+export { get as campaignGet, canRead as campaignCanRead, links as campaignLinks, bump as campaignBump, revision as campaignRevision, adminDTO as campaignAdminDTO };
 export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:URL,db:DB,config:Config,session?:Session):Promise<boolean>{
   const path=url.pathname,method=req.method??'GET',admin=path.startsWith('/api/master/campaign');
   if(!admin&&!path.startsWith('/api/campaign'))return false;
@@ -230,7 +348,7 @@ export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:
     if(path==='/api/master/campaign/context'&&method==='GET'){
       send(res,200,{npcs:all(db,'SELECT id,status,draft_json FROM npcs ORDER BY id').map(r=>({id:r.id,status:r.status,name:JSON.parse(String(r.draft_json)).name}))});return true;
     }
-    const match=path.match(/^\/api\/master\/campaign\/(quests|stories)(?:\/([\w-]+))?(?:\/(history|preview|preview-image|prepare|publish|duplicate|archive|restore|release|revoke|start|entries|reorder|reveal-entry|revoke-entry))?$/);
+    const match=path.match(/^\/api\/master\/campaign\/(quests|stories)(?:\/([\w-]+))?(?:\/(history|preview|preview-image|prepare|publish|duplicate|archive|restore|release|revoke|start|entries|reorder|reveal-entry|revoke-entry|objectives|clues|reorder-objectives|reorder-clues|objective-state|reveal-clue|revoke-clue|close|reopen))?$/);
     if(match){
       const domain=match[1] as Domain,id=match[2],action=match[3];
       if(!id){if(method==='GET'){send(res,200,list(db,domain,url));return true;}if(method==='POST'){send(res,201,create(db,domain,actor,await jsonBody(req,131_072)));return true;}}
@@ -254,18 +372,27 @@ export async function handleCampaign(req:IncomingMessage,res:ServerResponse,url:
         }
         if(method==='POST'){
           const data=await jsonBody(req);
+          if(domain==='quests'&&action){
+            if(['objectives','clues','reorder-objectives','reorder-clues'].includes(action)){const kind=action.includes('objectives')?'objectives':'clues';send(res,200,saveDefinition(db,actor,id,kind,action.startsWith('reorder')?'reorder':'save',data));return true;}
+            if(action==='objective-state'){send(res,200,updateObjective(db,actor,id,data));return true;}
+            if(action==='reveal-clue'||action==='revoke-clue'){send(res,200,revealClue(db,actor,id,action==='revoke-clue',data));return true;}
+            if(action==='close'||action==='reopen'){send(res,200,outcomeCommand(db,actor,id,action==='reopen',data));return true;}
+          }
           if(action==='duplicate'){send(res,200,duplicate(db,domain,actor,id,data));return true;}
           if(action&&['prepare','publish','archive','restore'].includes(action)){send(res,200,command(db,domain,actor,id,action,data));return true;}
           if(action&&['release','revoke','start'].includes(action)&&(domain==='quests'||action!=='start')){send(res,200,domain==='quests'?questAccess(db,actor,id,action,data):storyAccess(db,actor,id,action,data));return true;}
           if(domain==='stories'&&(action==='entries'||action==='reorder')){send(res,200,saveEntry(db,actor,id,action==='entries'?'save':'reorder',data));return true;}
           if(domain==='stories'&&(action==='reveal-entry'||action==='revoke-entry')){send(res,200,revealEntry(db,actor,id,action==='revoke-entry',data));return true;}
         }
+        if(domain==='quests'&&(action==='objectives'||action==='clues')&&method==='DELETE'){send(res,200,saveDefinition(db,actor,id,action,'remove',await jsonBody(req)));return true;}
         if(domain==='stories'&&action==='entries'&&method==='DELETE'){send(res,200,saveEntry(db,actor,id,'remove',await jsonBody(req)));return true;}
       }
     }
     fail(404,'Recurso não encontrado.');
   }
   const viewer=viewerFor(db,requireSession(session),url);
+  const clueImage=path.match(/^\/api\/campaign\/quests\/([\w-]+)\/clues\/([\w-]+)\/image$/);
+  if(clueImage&&method==='GET'){const row=get(db,'quests',clueImage[1]!),known=clueRecord(db,viewer,row,clueImage[2]!);if(!known||url.searchParams.get('stamp')!==digest(String(known.row.snapshot_json)).slice(0,20))fail(404,'Imagem indisponível.');await cover(db,config,res,known.saved);return true;}
   const match=path.match(/^\/api\/campaign\/(quests|stories|announcements)(?:\/([\w-]+))?(?:\/(image)|\/entries\/([\w-]+)\/image)?$/);
   if(match&&method==='GET'){
     const domain:Domain=match[1]==='stories'?'stories':'quests',announcement=match[1]==='announcements',id=match[2];

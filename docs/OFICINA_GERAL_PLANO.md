@@ -6,7 +6,7 @@ Status atualizado nesta branch: **F2.0a, F2.0b, F2.1 e F2.2a autorizadas e imple
 
 Foram comparados o código F0/F1 em `25db4a80e1ced6e904f9072dee72d81904998672`, a migração inicial, as APIs reais, os testes, os anexos V4 e o arquivo **`Hogwarts_1890_Prompt_Unico_Codex_Oficina_Geral.txt`**, lido integralmente (399 linhas), incluindo sua especificação incorporada, versão 1.0 de 21/10/2026.
 
-O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou separadamente F2.0a, depois F2.0b, F2.1 e agora F2.2a nesta sessão; fundação/PR/Hub/V4 seguem preservados e as etapas posteriores continuam exigindo nova autorização.
+O prompt único substitui a necessidade do arquivo separado anteriormente citado. **Não há especificação faltante.** O plano original exigia autorização antes de implementar. O usuário autorizou separadamente F2.0a, depois F2.0b, F2.1 e agora F2.2a nesta sessão; fundação/PR/Hub/V4 seguem preservados e todas as etapas restantes estão autorizadas pelo pedido mais recente.
 A regra principal passa a ser: uma seção de conteúdo só está completa quando o Mestre consegue criar, editar, publicar/revelar e arquivar seu conteúdo no site, com persistência, destinatários, proteção de campos e fluxo verificado até o jogador. Uma tela de consulta ou uma tabela vazia não satisfaz isso.
 
 ## Matriz: editor existente / ausente / dependências / fase — baseline F0/F1
@@ -150,7 +150,7 @@ Para PDFs, começar com templates estruturados e personalizáveis com texto, cam
 | F5.1 — Investigação | Casos e notas coletivas criados pelos jogadores, moderação e arquivo | Não confirma teorias nem importa segredos individuais |
 | F5.2 — Mídia ampliada, importação e qualidade | Gestor de templates/ornamentos completo, exportação/importação com prévia de conflitos, backup/restauração e compatibilidade de versões | MASTER apenas; preservar IDs/histórico e arquivos privados; nunca mesclar bancos do Hub |
 
-A sequência é proposta, não autorização de implementar todas as fases. A próxima fase de código deverá ser explicitamente escolhida. Para antecipar missões, manter F2.0 enxuta e limitar Itens ao cadastro necessário; não antecipar compras nem os módulos F3/F4.
+A sequência inicialmente proposta foi autorizada integralmente pelo pedido “Continue ate finalizar todas as etapas”. Para antecipar missões, manter F2.0 enxuta e limitar Itens ao cadastro necessário; não antecipar compras nem os módulos F3/F4.
 
 ## Critérios transversais de aceite
 
@@ -173,7 +173,7 @@ A especificação já resolve estes pontos: rascunho do Correio é do autor; an�
 
 Decisões de implementação a resolver somente na fase correspondente: tratamento de novos participantes sem revelar capítulos retroativamente; layout/campos editáveis de cada template; revogação controlada de um PDF já emitido; origem do pacote e regras de duplicatas; confirmar se venda direta do Mestre integra a F2.4. Nenhuma depende de escrever previamente conteúdo, números de missões, estoques ou cartas reais.
 
-**Próximo código: aguardar autorização do usuário para F2.2b (objetivos, pistas, fila e desfechos).** F2.0a, F2.0b, F2.1 e o corte F2.2a foram entregues; F2.2b/F2.2c continuam necessários para completar a Oficina de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. Nenhuma fase será iniciada automaticamente ao concluir este plano.
+**Autorização ampliada: continuar até finalizar todas as etapas, sem nova confirmação entre fases. F2.2b entregue: [condução, pistas, fila e desfechos](F2_2B_ENTREGA.md). Próximo código: F2.2c.** F2.0a, F2.0b, F2.1 e o corte F2.2a foram entregues; F2.2b/F2.2c continuam necessários para completar a Oficina de Missões, com Lojas na mesma F2. Os cortes menores não dispensam o aceite integral do módulo. As fases restantes serão executadas em sequência, com verificações e entregas separadas, conforme a autorização ampliada.
 
 ## Complementos da leitura integral — requisitos vinculantes
 

@@ -146,7 +146,7 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 ## Limitações e próximas fases
 
 - O mapa restaurado de Hogsmeade é **provisório**. O Mestre deve aprovar a qualidade/posições ou fornecer uma captura limpa fiel ao jogo. Há aviso no painel administrativo.
-- F2.0a, F2.0b, F2.1 e F2.2a estão implementadas. Faltam os cortes de condução/objetivos/pistas/desfechos de Missões, certificados/PDFs e concessões, além de lojas/ofertas/preços por loja, pedidos, estoque e carteira/transações em Nuques.
+- F2.0a, F2.0b, F2.1, F2.2a e F2.2b estão implementadas. Faltam certificados/PDFs e concessões, além de lojas/ofertas/preços por loja, pedidos, estoque e carteira/transações em Nuques.
 - F3/F4 não foram implementadas: calendário/grade reais, progressão, Taça, coleções com revelações graduais, cartas, jornal, investigações e memórias. Essas rotas ainda têm estados vazios; não anunciam ações funcionais inexistentes.
 - A tabela `publications` prepara futuras publicações; sem editor, envio ou marcação de leitura. Se uma publicação for inserida por uma futura integração, a leitura atual já filtra destinatários/contexto, sem efeitos colaterais.
 - O jogador tem uma conta/um personagem. Não há seletor público de identidade. Contas MASTER administram os personagens e podem convidar outros Mestres; não precisam representar um personagem.
@@ -157,4 +157,4 @@ Capturas e resultados: [docs/VALIDACAO.md](docs/VALIDACAO.md). Modelo e rotas: [
 
 A especificação completa das 15 oficinas foi comparada com a F0/F1. O [plano com matriz e contratos](docs/OFICINA_GERAL_PLANO.md) e o [backlog por fase, com dependências e testes](docs/BACKLOG_OFICINAS.md) ficam no repositório, com o inventário original preservado e os avanços registrados nas entregas. O planejamento mais recente organiza as próximas entregas em F2–F5 e prevalece sobre o resumo histórico F2–F4 acima.
 
-Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. F2.0a, F2.0b, F2.1 e F2.2a foram autorizadas e implementadas em branches/PRs próprias. A próxima fase é F2.2b — objetivos, pistas, fila e desfechos; iniciar essa fase ou posteriores exige nova autorização.
+Side-Quests/Histórias Individuais, Itens, Lojas e NPCs têm prioridade na F2. Cada módulo exige editor funcional no Painel do Mestre, persistência e leitura autorizada; uma página vazia não é uma oficina concluída. A PR #1 da fundação permanece preservada. F2.0a, F2.0b, F2.1 e F2.2a foram autorizadas e implementadas em branches/PRs próprias. O usuário autorizou concluir todas as etapas restantes sem nova confirmação entre fases. A F2.2b entrega condução, pistas e desfechos; a execução segue para certificados e concessões na F2.2c. [Acompanhar todas as etapas](docs/EXECUCAO_COMPLETA.md).

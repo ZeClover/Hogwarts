@@ -14,7 +14,7 @@ test('migrations são repetíveis e seed mantém somente cinco personagens, cat�
   const db=openDatabase(f.config);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM characters').get().n,5);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM publications').get().n,0);
-  assert.equal(db.prepare('SELECT COUNT(*) n FROM schema_migrations').get().n,5);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM schema_migrations').get().n,6);
   assert.equal(db.prepare("SELECT is_open FROM regions WHERE id='hogsmeade'").get().is_open,0);db.close();
 });
 test('sessão obrigatória e arquivos internos nunca são servidos',async()=>{
