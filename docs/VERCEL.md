@@ -49,6 +49,14 @@ npm run master:invite -- mestre@seu-dominio.com
 
 As migrations são executadas explicitamente antes da publicação, fora de requisições e do build. O convite inicial é privado, expira em uma hora e só pode ser criado enquanto não houver um Mestre.
 
+### Primeira instalação pelo console SQL
+
+Para um banco libSQL **novo e vazio**, [deployment/bootstrap-empty.sql](../deployment/bootstrap-empty.sql) reúne as migrations e o mesmo seed canônico da aplicação. O arquivo não contém tokens, senhas ou convites. Ele cria a estrutura e os cinco personagens; a conta do Mestre continua exigindo um convite privado separado.
+
+Use um executor que envie o **script completo na mesma transação** e interrompa ao encontrar um erro. Confira a opção de execução de lote do console; um botão que executa apenas a instrução sob o cursor não basta. A consulta final deve retornar `migrations=20`, `casas=4` e `personagens=5` nesta versão. A proteção inicial recusa bancos que já tenham tabelas. Havendo erro, interrompa e faça rollback da transação antes de qualquer nova tentativa.
+
+O arquivo é gerado por `npm run db:bootstrap-sql` a partir das migrations e de um seed temporário, sem ler o banco da campanha. Os testes verificam que o arquivo publicado corresponde ao gerador e produz a estrutura esperada pelo cliente libSQL. Para atualizar uma instalação existente, use `npm run db:migrate`.
+
 ### Transferência de uma campanha local existente
 
 A recuperação cifrada do painel preserva as contas do destino e exige vínculos compatíveis. Para transferir uma instalação existente, preserve os IDs originais das contas e dos arquivos por meio da cópia operacional completa, antes de criar contas no destino:

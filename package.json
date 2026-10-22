@@ -17,7 +17,8 @@
     "db:migrate": "node --env-file-if-exists=.env --experimental-strip-types src/cli.ts migrate",
     "master:invite": "node --env-file-if-exists=.env --experimental-strip-types src/cli.ts master-invite",
     "backup": "node --env-file-if-exists=.env --experimental-strip-types src/cli.ts backup",
-    "test:cloud": "npm run build && node scripts/test-cloud.mjs"
+    "test:cloud": "npm run build && node scripts/test-cloud.mjs",
+    "db:bootstrap-sql": "npm run build && node scripts/database-bootstrap.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
