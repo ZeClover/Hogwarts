@@ -24,6 +24,7 @@ import {handleCalendar} from './school.ts';
 import {handleBoards,locationBoards} from './boards.ts';
 import {handleCup} from './cup.ts';
 import {handleCollections} from './collections.ts';
+import {handleJournal} from './journal.ts';
 import {handleMail} from './mail.ts';
 import {handleChocolate} from './chocolate.ts';
 import {mirrorLocation,regionMap,locationShops} from './world.ts';
@@ -140,6 +141,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
         const actor = requireSession(session);
         return send(res,200,{role:actor.role,csrf:actor.csrf,characterId:actor.characterId});
       }
+      if (await handleJournal(req,res,url,db,config,session)) return;
       if (await handleMail(req,res,url,db,session)) return;
       if (await handleChocolate(req,res,url,db,session)) return;
       if (await handleCollections(req,res,url,db,config,session)) return;
