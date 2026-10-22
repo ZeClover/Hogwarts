@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { fixture } from './helpers.mjs';
+import { settleAnimations } from './browser-helpers.mjs';
 let f,npc;
 const quests='/portal/mestre/oficinas/missoes',stories='/portal/mestre/oficinas/historias';
 test.use({actionTimeout:10_000});
@@ -11,7 +12,7 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{await f?.close();});
 async function login(page,email='master@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
-async function checks(page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
+async function checks(page){await settleAnimations(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
 async function capture(page,name){await page.locator('#main').focus();await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await expect(page.locator('#toast')).not.toHaveClass(/visible/,{timeout:8_000});await page.screenshot({path:'docs/screenshots/f2-2a/'+name,fullPage:true,animations:'disabled'});}
 async function confirm(page){await page.getByRole('button',{name:'Confirmar ação',exact:true}).press('Enter');await expect(page.getByRole('button',{name:'Confirmar ação',exact:true})).toHaveCount(0);await expect(page.locator('#toast')).toContainText('Ação registrada.');}
 async function action(page,name){await page.getByRole('button',{name,exact:true}).click();await confirm(page);}
@@ -42,4 +43,37 @@ test('história individual revela capítulos só ao protagonista e conserva conh
 
 test('autoria preserva conflito entre editores, filtros e entrada em desktop sem imagem',async({page,context})=>{
   await page.setViewportSize({width:1440,height:1000});await login(page);await page.goto(f.config.origin+quests+'/novo');await page.getByLabel('Título',{exact:true}).fill('CONFLITO NARRATIVO');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();const other=await context.newPage();await other.goto(page.url());await expect(other.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();await page.getByLabel('Resumo público',{exact:true}).fill('Mudança preservada');await save(page);await other.getByLabel('Resumo público',{exact:true}).fill('Sobrescrita indevida');await other.getByRole('button',{name:'Salvar rascunho',exact:true}).click();await expect(other.locator('[data-campaign-form="profile"] .form-error')).toContainText('outra sessão');await expect(other.getByLabel('Resumo público',{exact:true})).toHaveValue('Sobrescrita indevida');await other.close();await page.getByRole('button',{name:'Duplicar como rascunho',exact:true}).click();await expect(page.getByLabel('Título',{exact:true})).toHaveValue('CONFLITO NARRATIVO — cópia');await page.getByRole('button',{name:'Voltar à lista',exact:true}).click();await page.getByLabel('Buscar narrativa',{exact:true}).fill('CONFLITO NARRATIVO');await page.getByRole('button',{name:'Buscar narrativas',exact:true}).click();await expect(page.locator('.campaign-card')).toHaveCount(2);await page.getByLabel('Estado',{exact:true}).selectOption('PUBLISHED');await page.getByRole('button',{name:'Buscar narrativas',exact:true}).click();await expect(page.getByText('Nenhuma narrativa neste filtro.')).toBeVisible();await checks(page);
+});
+
+test('missão negada continua segura no polling e acompanha liberação, revogação e nova liberação',async({page})=>{
+  const policy={audience:'ALL',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null};
+  const created=await f.master.request('/api/master/campaign/quests',{method:'POST',body:{
+    payload:{title:'MISSAO DE REGRESSAO DO POLLING',summary:'Resumo autorizado após liberação.',kind:'Side-quest',academicYear:'1890–1891',fileId:null,alt:'',npcId:null,locationId:null,hook:''},
+    policy,private:{synopsis:'SEGREDO DO POLLING',importance:'',releaseConditions:'',notes:''}
+  }});
+  expect(created.status).toBe(201);
+  let quest=created.value;
+  async function command(action){
+    const response=await f.master.request(`/api/master/campaign/quests/${quest.id}/${action}`,{method:'POST',body:{version:quest.version,...(action==='publish'?{}:{characters:['eiris']})}});
+    expect(response.status,JSON.stringify(response.value)).toBe(200);quest=response.value;
+  }
+  await command('publish');
+  await login(page,'eiris@test.invalid');
+  const endpoint=`/api/campaign/quests/${quest.id}`;
+  let deniedReads=0;
+  page.on('response',response=>{if(new URL(response.url()).pathname===endpoint&&response.status()===404)deniedReads++;});
+  await page.goto(f.config.origin+'/portal/missoes/grupo/'+quest.id);
+  await expect(page.locator('body')).toContainText('Registro não encontrado.');
+  // Exercise a periodic retry after the initial 404, not just the first render.
+  await expect.poll(()=>deniedReads,{timeout:12_000}).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('body')).toContainText('Registro não encontrado.');
+  await expect(page.locator('body')).not.toContainText('MISSAO DE REGRESSAO DO POLLING');
+  await command('release');
+  await expect(page.locator('.campaign-record')).toContainText('Resumo autorizado após liberação.',{timeout:12_000});
+  await command('revoke');
+  await expect(page.locator('body')).toContainText('Registro não encontrado.',{timeout:12_000});
+  await expect(page.locator('.campaign-record')).toHaveCount(0);
+  await command('release');
+  await expect(page.locator('.campaign-record')).toContainText('Resumo autorizado após liberação.',{timeout:12_000});
+  await expect(page.locator('body')).not.toContainText('SEGREDO DO POLLING');
 });
