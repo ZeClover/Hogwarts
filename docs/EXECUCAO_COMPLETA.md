@@ -18,7 +18,7 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F4.1 — correio e entrega manual | Entregue, PR #16 |
 | F4.2 — Profeta Diário | Entregue, PR #17 |
 | F5.0 — anuários/retrospectivas | Entregue, PR #18 |
-| F5.1 — investigação coletiva/moderação | Autorizada |
+| F5.1 — investigação coletiva/moderação | Entregue, PR #19 |
 | F5.2 — templates/importação/exportação/qualidade | Autorizada |
 
 Decisões de implementação serão resolvidas dentro do escopo aprovado. Dependências pendentes não serão simuladas como concessões ou transações prontas. [Backlog vinculante](BACKLOG_OFICINAS.md).
