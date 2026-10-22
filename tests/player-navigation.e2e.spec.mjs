@@ -6,6 +6,7 @@ let f,shop;
 const policy={audience:'ALL',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null};
 test.beforeAll(async()=>{
  f=await fixture();
+ for(const [id,title,secret] of [['school-place','LOCAL ESCOLAR REVELADO',0],['school-secret','LOCAL ESCOLAR SECRETO',1]])f.db.prepare("INSERT INTO locations(id,region_id,title,image,kind,is_secret,enabled,audience) VALUES(?,'hogwarts',?,'hogwarts_claustro.webp','ARCHIVE',?,1,'ALL')").run(id,title,secret);
  await f.master.request('/api/master/regions/hogsmeade',{method:'PATCH',body:{isOpen:true,audience:'SELECTED',characters:['atlas'],groups:[]}});
  const created=await f.master.request('/api/master/content/shops',{method:'POST',body:{payload:{title:'Loja de Olivaras',description:'Atendimento da loja.',locationId:'olivaras',npcId:null,fileId:null,alt:'',hasCatalog:true,available:true},policy,privateNotes:'SEGREDO DA LOJA'}});
  expect(created.status).toBe(201);
@@ -31,6 +32,8 @@ test('menu de cinco ações, Diário direto, escola em dois cliques e navegaçã
  await expect(nav.getByRole('link',{name:'Diário',exact:true})).toHaveAttribute('aria-current','page');
  await nav.getByRole('link',{name:'Início',exact:true}).click();
  await page.getByRole('link',{name:/^Hogwarts Biblioteca/}).click();
+ await expect(page.getByRole('link',{name:'LOCAL ESCOLAR REVELADO Local revelado'})).toBeVisible();
+ await expect(page.locator('main')).not.toContainText('LOCAL ESCOLAR SECRETO');
  await page.getByRole('link',{name:/^Biblioteca Acervo escolar/}).click();
  await expect(page.getByRole('heading',{name:'Biblioteca',exact:true})).toBeVisible();
  await nav.getByRole('link',{name:'Acervos',exact:true}).click();
