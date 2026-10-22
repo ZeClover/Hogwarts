@@ -14,8 +14,8 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F3.2 — murais/propostas | Entregue, PR #12 |
 | F3.3 — Taça das Casas | Entregue, PR #13 |
 | F4.0a — coleções e revelações | Entregue, PR #14 |
-| F4.0b — sapos/pacotes | Em implementação |
-| F4.1 — correio e entrega manual | Autorizada |
+| F4.0b — sapos/pacotes | Entregue, PR #15 |
+| F4.1 — correio e entrega manual | Próxima etapa autorizada |
 | F4.2 — Profeta Diário | Autorizada |
 | F5.0 — anuários/retrospectivas | Autorizada |
 | F5.1 — investigação coletiva/moderação | Autorizada |
