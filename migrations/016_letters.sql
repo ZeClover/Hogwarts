@@ -1,0 +1,3 @@
+CREATE TABLE letters(id TEXT PRIMARY KEY,author_user_id TEXT NOT NULL REFERENCES users(id),sender_character_id TEXT REFERENCES characters(id),version INTEGER NOT NULL DEFAULT 1,status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN('DRAFT','SUBMITTED','HELD','RETURNED','LOST','DELIVERED')),draft_json TEXT NOT NULL,sent_json TEXT,private_reason TEXT NOT NULL DEFAULT '',image_base64 TEXT,archived_by_author INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX letters_author ON letters(author_user_id,status);
+CREATE TABLE letter_revisions(id TEXT PRIMARY KEY,letter_id TEXT NOT NULL REFERENCES letters(id),version INTEGER NOT NULL,snapshot_json TEXT NOT NULL,UNIQUE(letter_id,version));
