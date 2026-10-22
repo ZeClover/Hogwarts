@@ -1,3 +1,6 @@
+import { createClient } from '@libsql/client';
+import { remoteDatabase } from '../dist/async-db.js';
+import { openDatabase } from '../dist/db.js';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -16,7 +19,9 @@ export async function commercialFixture(f,{stock=5,price=29,fileId=null}={}){
 export async function fixture() {
   const directory=await mkdtemp(join(tmpdir(),'hogwarts-test-'));
   const config={port:0,host:'127.0.0.1',origin:'http://127.0.0.1',secure:false,dataDir:directory,publicDir:resolve('public'),migrationsDir:resolve('migrations')};
-  const app=createApplication(config);
+  const rawDb=openDatabase(config);
+  const remote=process.env.TEST_DB_BACKEND==='libsql'?remoteDatabase(createClient({url:'file:'+join(directory,'hogwarts.sqlite'),intMode:'number'})):null;
+  const app={...createApplication(config,remote??rawDb),db:rawDb};
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   config.port=app.server.address().port;config.origin=`http://127.0.0.1:${config.port}`;
   const client=()=>({
@@ -50,6 +55,6 @@ export async function fixture() {
   const atlas=await client().activate(await invite('atlas'),'atlas@test.invalid');
   const eiris=await client().activate(await invite('eiris'),'eiris@test.invalid');
   return {...app,client,master,atlas,eiris,invite,password,
-    async close(){await new Promise(resolve=>{app.server.close(resolve);app.server.closeAllConnections();});app.db.close();await rm(directory,{recursive:true,force:true});}
+    async close(){await new Promise(resolve=>{app.server.close(resolve);app.server.closeAllConnections();});remote?.close();app.db.close();await rm(directory,{recursive:true,force:true});}
   };
 }

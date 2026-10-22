@@ -15,8 +15,12 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Integration checks through the libSQL client
+        run: npm run test:cloud
       - run: npx playwright install --with-deps chromium
       - name: Browser and accessibility checks
+        env:
+          TEST_DB_BACKEND: libsql
         run: |
           export PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(node --input-type=module -e 'import {chromium} from "playwright"; process.stdout.write(chromium.executablePath())')"
           npm run test:e2e

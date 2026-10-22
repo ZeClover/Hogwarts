@@ -2,7 +2,7 @@
 
 Portal privado da campanha, com as **15 oficinas funcionais** e as etapas F0–F5 implementadas em PRs encadeadas. Mantém a fundação existente, a identidade visual V4 e a independência do Hub RPG. Conteúdo da campanha é criado no Painel do Mestre; não requer código novo para cada missão, objeto, carta ou livro.
 
-[Guia completo do Mestre](docs/GUIA_DO_MESTRE.md) · [Matriz final e evidências](docs/F5_2_ENTREGA.md) · [Entregas por fase](docs/EXECUCAO_COMPLETA.md)
+[Guia completo do Mestre](docs/GUIA_DO_MESTRE.md) · [Matriz final e evidências](docs/F5_2_ENTREGA.md) · [Entregas por fase](docs/EXECUCAO_COMPLETA.md) · [Hospedagem na Vercel](docs/VERCEL.md)
 
 A Oficina Geral reúne mídia, modelos, NPCs, itens, missões e histórias, regiões/locais/lojas/ofertas, livros/aulas, cinco coleções, correio, murais, calendário/grade, Profeta Diário, Taça, anuários e retrospectivas. A Central da Sessão opera permissões, participantes, objetivos, pistas, recompensas, entregas e pontos. O caderno é escrito pelos jogadores e moderado pelo Mestre.
 
@@ -10,7 +10,7 @@ Rascunho, publicação, revelação, emissão e concessão são separados. PDFs 
 
 ## Stack
 
-**Node.js 24.x + TypeScript + SQLite nativo (`node:sqlite`) + HTML/CSS/JavaScript**. A única dependência de execução externa é `sharp`, para decodificar e regravar fotos. O servidor HTTP, migrações, autenticação e autorização estão no projeto. SQLite atende a um grupo pequeno em uma única instância com volume persistente; não é uma arquitetura para múltiplas réplicas sem coordenação. `node:sqlite` pode emitir aviso de API experimental no Node 24.
+**Node.js 24.x + TypeScript + HTML/CSS/JavaScript**, com SQLite nativo (`node:sqlite`) e arquivos privados para instalação local, ou **Turso/libSQL e Vercel Blob privado** para nuvem. `sharp` regrava imagens; `pdf-lib`/fontkit geram documentos individuais. O servidor HTTP, migrações, autenticação e autorização estão no projeto. A instalação SQLite local exige uma única instância e volume persistente; as funções Vercel usam persistência externa. `node:sqlite` também valida importações em uma cópia descartável e pode emitir aviso de API experimental no Node 24.
 
 O repositório estava vazio, sem framework ou aplicação anterior. Nada foi conectado ao Hub RPG.
 
@@ -55,7 +55,7 @@ Não há segredo de sessão compartilhado para configurar: tokens de alta entrop
 
 **Para uma instalação privada:** use uma única instância Node atrás de HTTPS, com `NODE_ENV=production`, `APP_ORIGIN=https://seu-host` e volume persistente privado em `DATA_DIR`. O proxy deve encaminhar `/api/*` ao Node sem cache e não deve servir `data/`, `backups/` ou o repositório. O app não confia em `X-Forwarded-For`; atrás de proxy, o limite de autenticação por IP é compartilhado entre clientes, além do limite individual por e-mail. Avalie o limite no proxy quando instalar.
 
-Esta entrega não executa deploy público nem configura domínio, HTTPS, e-mail, serviço de sistema ou backup externo automaticamente.
+Para a Vercel, siga o [guia de configuração, migrations e publicação](docs/VERCEL.md). O deploy com serviços reais depende das credenciais e permissões do time; o guia registra o estado dessa validação. Não há envio automático de e-mail.
 
 ## Persistência, segurança e recuperação
 
@@ -63,7 +63,7 @@ SQLite com migrations transacionais e volume privado em `DATA_DIR`. Políticas e
 
 `npm run db:migrate` aplica migrations pendentes. Faça backup antes de atualizar; não há rollback automático. O seed mantém as quatro Casas, os cinco protagonistas e os contêineres confirmados da V4; não cria senhas, NPCs, produtos, estoque, saldos, cartas, edições ou missões fictícias.
 
-A Oficina oferece exportação autoral/importação revisada como rascunhos e backup cifrado/recuperação da campanha. A chave fica em `DATA_DIR/backup.key`; o Mestre não recebe rascunhos privados em texto legível. Recuperação preserva contas, sessões, convites e auditoria atuais. Regras e limites detalhados no [guia](docs/GUIA_DO_MESTRE.md).
+A Oficina oferece exportação autoral/importação revisada como rascunhos e backup cifrado/recuperação da campanha. A chave fica em `DATA_DIR/backup.key` na instalação local ou em `BACKUP_ENCRYPTION_KEY` na nuvem; o Mestre não recebe rascunhos privados em texto legível. Recuperação preserva contas, sessões, convites e auditoria atuais. Regras e limites detalhados no [guia](docs/GUIA_DO_MESTRE.md).
 
 Para cópia operacional, pare o servidor e execute `npm run backup -- /caminho/privado`. O comando copia SQLite, `media/` e a chave de backup, quando existir. Guarde esse conjunto privado e cifrado fora do host. Para recuperar a instalação: preserve o diretório atual; restaure banco, mídia e chave do mesmo conjunto em `DATA_DIR` novo, sem WAL/SHM antigos; migre e teste isoladamente antes de iniciar o acesso real.
 
@@ -79,10 +79,11 @@ O [planejamento inicial](docs/OFICINA_GERAL_PLANO.md) fica preservado como inven
 npm run lint
 npm run typecheck
 npm test
+npm run test:cloud
 npm run test:e2e
 ```
 
-Os testes de integração usam bancos temporários descartáveis. As credenciais em `tests/helpers.mjs` pertencem somente a essas fixtures e não são criadas no app real. Os testes de navegador usam Chromium e axe-core; capturam desktop de 1440 px e celular de 390 px, quatro Casas e fluxo de convite.
+Os testes de integração usam bancos temporários descartáveis. `test:cloud` executa a mesma suíte através do SDK libSQL com transporte de arquivo; não substitui o teste nos serviços externos. As credenciais em `tests/helpers.mjs` pertencem somente a essas fixtures e não são criadas no app real. Os testes de navegador usam Chromium e axe-core; capturam desktop de 1440 px e celular de 390 px, quatro Casas e fluxo de convite.
 
 O navegador configurado por padrão é `/usr/bin/chromium`. Em outra máquina, instale Chromium e ajuste `PLAYWRIGHT_CHROMIUM_EXECUTABLE` para o executável. A CI instala o navegador do Playwright e fornece esse caminho automaticamente.
 

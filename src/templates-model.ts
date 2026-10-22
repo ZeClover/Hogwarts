@@ -1,8 +1,20 @@
-import {all,one,type DB} from './db.ts';import {fail} from './auth.ts';
-export const templateFamilies=['BOOK','LETTER','NEWSPAPER','CERTIFICATE','CREATURE','CARD','VITRINE','SCRAPBOOK'];
-export const templateVariants=['PARCHMENT','FORMAL','BRONZE','SCRAPBOOK','NEWSPAPER'];
-export const templateTones=['BRONZE','BURGUNDY','FOREST','MIDNIGHT'];
-export const kindFamilies:Record<string,string>={books:'BOOK',lessons:'BOOK',newspapers:'NEWSPAPER',yearbooks:'SCRAPBOOK',retrospectives:'SCRAPBOOK',bestiary:'CREATURE',chocolatecards:'CARD',curiosities:'VITRINE',memories:'SCRAPBOOK',rarities:'BOOK',shops:'VITRINE'};
-export type TemplateSnapshot={id:string;revision:number;name:string;variant:string;tone:string;heading:string;footer:string};
-export function templateChoices(db:DB,family:string){return all(db,"SELECT * FROM content_records WHERE kind='templates' AND status='PUBLISHED'").flatMap(r=>{const p=JSON.parse(String(r.published_json));return p.family===family?[{id:String(r.id),name:String(p.title)}]:[];});}
-export function templateSnapshot(db:DB,id:unknown,family:string):TemplateSnapshot|null{if(id===null||id===undefined||id==='')return null;if(typeof id!=='string')fail(400,'Modelo inválido.');const r=one(db,"SELECT * FROM content_records WHERE id=? AND kind='templates' AND status='PUBLISHED'",id)??fail(422,'Publique o modelo antes de utilizá-lo.');const p=JSON.parse(String(r.published_json));if(p.family!==family)fail(422,'Escolha um modelo da família correta.');return {id,revision:Number(r.published_revision),name:p.title,variant:p.variant,tone:p.tone,heading:p.heading,footer:p.footer};}
+import { all, one, type DB } from './db.ts';
+import { fail } from './auth.ts';
+export const templateFamilies = ['BOOK', 'LETTER', 'NEWSPAPER', 'CERTIFICATE', 'CREATURE', 'CARD', 'VITRINE', 'SCRAPBOOK'];
+export const templateVariants = ['PARCHMENT', 'FORMAL', 'BRONZE', 'SCRAPBOOK', 'NEWSPAPER'];
+export const templateTones = ['BRONZE', 'BURGUNDY', 'FOREST', 'MIDNIGHT'];
+export const kindFamilies: Record<string, string> = { books: 'BOOK', lessons: 'BOOK', newspapers: 'NEWSPAPER', yearbooks: 'SCRAPBOOK', retrospectives: 'SCRAPBOOK', bestiary: 'CREATURE', chocolatecards: 'CARD', curiosities: 'VITRINE', memories: 'SCRAPBOOK', rarities: 'BOOK', shops: 'VITRINE' };
+export type TemplateSnapshot = {
+    id: string;
+    revision: number;
+    name: string;
+    variant: string;
+    tone: string;
+    heading: string;
+    footer: string;
+};
+export async function templateChoices(db: DB, family: string) { return (await all(db, "SELECT * FROM content_records WHERE kind='templates' AND status='PUBLISHED'")).flatMap(r => { const p = JSON.parse(String(r.published_json)); return p.family === family ? [{ id: String(r.id), name: String(p.title) }] : []; }); }
+export async function templateSnapshot(db: DB, id: unknown, family: string): Promise<TemplateSnapshot | null> { if (id === null || id === undefined || id === '')
+    return null; if (typeof id !== 'string')
+    fail(400, 'Modelo inválido.'); const r = await one(db, "SELECT * FROM content_records WHERE id=? AND kind='templates' AND status='PUBLISHED'", id) ?? fail(422, 'Publique o modelo antes de utilizá-lo.'); const p = JSON.parse(String(r.published_json)); if (p.family !== family)
+    fail(422, 'Escolha um modelo da família correta.'); return { id, revision: Number(r.published_revision), name: p.title, variant: p.variant, tone: p.tone, heading: p.heading, footer: p.footer }; }

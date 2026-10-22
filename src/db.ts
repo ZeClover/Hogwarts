@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import type { Config } from './config.ts';
 
 export type Row = Record<string, string | number | null>;
-export type DB = DatabaseSync;
-export function openDatabase(config: Config): DB {
+export type { AsyncDatabase as DB } from './async-db.ts';
+import type { AsyncDatabase as DB } from './async-db.ts';
+export function openDatabase(config: Config): DatabaseSync {
   mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
   mkdirSync(join(config.dataDir, 'media'), { recursive: true, mode: 0o700 });
   const file = join(config.dataDir, 'hogwarts.sqlite');
@@ -15,7 +16,7 @@ export function openDatabase(config: Config): DB {
   db.exec('CREATE TABLE IF NOT EXISTS schema_migrations(name TEXT PRIMARY KEY, applied_at INTEGER DEFAULT(unixepoch()))');
   for (const name of readdirSync(config.migrationsDir).filter(x => x.endsWith('.sql')).sort()) {
     if (!db.prepare('SELECT name FROM schema_migrations WHERE name=?').get(name)) {
-      transaction(db, () => {
+      localTransaction(db, () => {
         db.exec(readFileSync(join(config.migrationsDir, name), 'utf8'));
         db.prepare('INSERT INTO schema_migrations(name) VALUES(?)').run(name);
       });
@@ -24,23 +25,26 @@ export function openDatabase(config: Config): DB {
   seed(db);
   return db;
 }
-export function transaction<T>(db: DB, fn: () => T): T {
+function localTransaction<T>(db: DatabaseSync, fn: () => T): T {
   db.exec('BEGIN IMMEDIATE');
   try { const result = fn(); db.exec('COMMIT'); return result; }
   catch (error) { db.exec('ROLLBACK'); throw error; }
 }
-export function one(db: DB, sql: string, ...args: (string | number | null)[]): Row | undefined {
-  return db.prepare(sql).get(...args) as Row | undefined;
+export async function transaction<T>(db: DB, fn: () => T | Promise<T>): Promise<T> {
+  return db.transaction(fn);
 }
-export function all(db: DB, sql: string, ...args: (string | number | null)[]): Row[] {
-  return db.prepare(sql).all(...args) as Row[];
+export async function one(db: DB, sql: string, ...args: (string | number | null)[]): Promise<Row | undefined> {
+  return db.prepare(sql).get(...args);
 }
-export function audit(db: DB, actor: string | null, action: string, type: string, target: string, details = {}) {
-  db.prepare('INSERT INTO audit_log(actor_id,action,target_type,target_id,details) VALUES(?,?,?,?,?)')
+export async function all(db: DB, sql: string, ...args: (string | number | null)[]): Promise<Row[]> {
+  return db.prepare(sql).all(...args);
+}
+export async function audit(db: DB, actor: string | null, action: string, type: string, target: string, details = {}) {
+  await db.prepare('INSERT INTO audit_log(actor_id,action,target_type,target_id,details) VALUES(?,?,?,?,?)')
     .run(actor, action, type, target, JSON.stringify(details));
 }
-function seed(db: DB) {
-  transaction(db, () => {
+function seed(db: DatabaseSync) {
+  localTransaction(db, () => {
     for (const [id, name, room] of [
       ['gryffindor', 'Grifinória', 'sala_grifinoria.webp'], ['hufflepuff', 'Lufa-Lufa', 'sala_lufalufa.webp'],
       ['ravenclaw', 'Corvinal', 'sala_corvinal.webp'], ['slytherin', 'Sonserina', 'sala_sonserina.webp']
