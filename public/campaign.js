@@ -21,7 +21,7 @@ export function createCampaignOffice({api,esc,label,empty,button,state,render,na
   const formError='<p class="form-error" role="alert" tabindex="-1"></p>';
   const nameOf=id=>context.characters.find(c=>c.id===id)?.name??'Personagem';
   const viewImage=path=>path+(state.view&&!path.includes('view_as=')?'&view_as='+encodeURIComponent(state.view):'');
-  function tabs(isAdmin=false){const bases=isAdmin?adminBases:publicBases;return `<nav class="admin-tabs campaign-tabs" aria-label="${isAdmin?'Oficinas narrativas':'Seções do Diário'}">${[['quests',isAdmin?'Missões':'Missões em Grupo'],['stories','Histórias Individuais']].map(([key,title])=>`<a href="${bases[key]}" data-go="${bases[key]}" ${domain===key?'aria-current="page"':''}>${title}</a>`).join('')}</nav>`;}
+  function tabs(isAdmin=false){const bases=isAdmin?adminBases:publicBases;return `<nav class="admin-tabs campaign-tabs" aria-label="${isAdmin?'Oficinas narrativas':'Seções do Diário'}">${[['quests',isAdmin?'Missões':'Missões em Grupo'],['stories','Histórias Individuais']].map(([key,title])=>`<a href="${bases[key]}" data-go="${bases[key]}" ${domain===key?'aria-current="page"':''}>${title}</a>`).join('')}${!isAdmin?'<a href="/portal/investigacoes" data-go="/portal/investigacoes">Investigações</a>':''}</nav>`;}
   async function load(){
     if(!handles(state.page))return;error=null;entryId=null;definitionKind=null;definitionId=null;pending=null;
     domain=state.page.includes('/historias')?'stories':state.page.startsWith('/portal/oportunidades')?'announcements':'quests';

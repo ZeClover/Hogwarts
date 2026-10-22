@@ -1,0 +1,42 @@
+// Navigation consumes only the character's authorized portal state. The server
+// remains responsible for every destination, search result and media request.
+export const primarySections=[['Início','inicio'],['Explorar','explorar'],['Diário','diario'],['Acervos','acervos'],['Correio','correio']];
+export function playerSection(path){
+  if(/^\/portal\/(diario|missoes|oportunidades|investigacoes|documentos)(\/|$)/.test(path))return 'diario';
+  if(/^\/portal\/(acervos|colecoes|sapos|curiosidades|recordacoes)(\/|$)/.test(path)||/^\/portal\/conteudos\/(chocolatecards|bestiary|rarities|memories|curiosities)(\/|$)/.test(path))return 'acervos';
+  if(path.startsWith('/portal/correio'))return 'correio';
+  if(/^\/portal\/(explorar|hogwarts|hogsmeade|regiao|local|catalogo|pedido|calendario|sala-comunal|salao-principal|avisos|casas|taca)(\/|$)/.test(path)||path.startsWith('/portal/conteudos/'))return 'explorar';
+  return path==='/portal/inicio'?'inicio':null;
+}
+export function createPlayerPages({state,esc,ico,label,empty,button,pathWithView,render}){
+  let query='';
+  const regions=()=>state.portal.regions.filter(r=>r.accessible);
+  const regionPath=r=>r.id==='hogwarts'?'/portal/hogwarts':r.id==='hogsmeade'?'/portal/hogsmeade':'/portal/regiao/'+r.id;
+  const link=(title,path,description='',icon='arrow')=>`<a class="context-link" href="${esc(pathWithView(path))}" data-go="${esc(path)}">${ico(icon,23)}<span><strong>${esc(title)}</strong>${description?`<small>${esc(description)}</small>`:''}</span>${ico('arrow',16)}</a>`;
+  const links=items=>`<div class="context-links">${items.map(([title,path,description,icon])=>link(title,path,description,icon)).join('')}</div>`;
+  const hasSchool=()=>regions().some(r=>r.id==='hogwarts');
+  const recentKey=()=>'hogwarts-recent:'+state.session.role+':'+(state.view??state.portal.character?.id??'MASTER');
+  function remember(path){if(!playerSection(path)||path==='/portal/inicio'||/^\/portal\/(catalogo|pedido)\//.test(path))return;try{window.sessionStorage.setItem(recentKey(),path);}catch{/* Navigation also works when browser storage is unavailable. */}}
+  function continueLink(){try{const path=window.sessionStorage.getItem(recentKey());if(!path||path.length>=250||!playerSection(path))return '';if(path==='/portal/hogsmeade'&&!regions().some(r=>r.id==='hogsmeade'))return '';if(path.startsWith('/portal/regiao/')&&!regions().some(r=>r.id===path.split('/').pop()))return '';if(path.startsWith('/portal/local/')&&!state.portal.locations.some(l=>l.id===path.split('/').pop()))return '';return link('Continuar de onde parei',path,'Retomar a última página visitada');}catch{return '';}}
+  function home(){
+    const p=state.portal.character;
+    const shortcuts=[...(hasSchool()?[['Hogwarts','/portal/hogwarts','Biblioteca, aulas e vida escolar','castle']]:[]),['Diário','/portal/diario','Missões, histórias e investigações','scroll'],['Acervos','/portal/acervos','Seus registros e descobertas','book']];
+    return `${label('SEUS ARQUIVOS MÁGICOS')}<section class="player-welcome"><div><span class="eyebrow">${esc(p?.houseName??'Arquivos Mágicos')}</span><h1 class="display">Hogwarts</h1><p>Bem-vindo${p?', '+esc(p.name):''}.</p></div><img src="${esc(p?.crest??'/assets/hogwarts.webp')}" alt="${esc(p?.houseName??'Brasão de Hogwarts')}"></section>${links(shortcuts)}${continueLink()}<div class="afterhome"><section class="card note-panel"><header><h2 class="head3">Novidades</h2></header>${state.portal.news.length?state.portal.news.map(n=>link(n.title,'/portal/publicacao/'+n.id)).join(''):'<div class="no-news"><p>Nenhuma novidade por enquanto.</p></div>'}</section><section class="card note-panel"><h2 class="head3">Acesso rápido</h2>${links([['Correio','/portal/correio','Ler e escrever cartas','mail'],...(hasSchool()?[['Aulas e horários','/portal/calendario','Programação publicada','clock']]:[]),...regions().filter(r=>r.id!=='hogwarts').slice(0,2).map(r=>[r.title,regionPath(r),'Explorar região liberada','map'])])}</section></div>`;
+  }
+  function explore(){
+    const visible=regions().filter(r=>r.title.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))).sort((a,b)=>Number(b.id==='hogwarts')-Number(a.id==='hogwarts'));
+    return `${label('EXPLORAÇÃO')}<h1 class="display">Explorar</h1><p class="muted">Lugares disponíveis para sua jornada.</p><form class="workshop-filters" data-explore-search><label class="field">Buscar região<input name="q" type="search" value="${esc(query)}" maxlength="120"></label><button class="btn ghost">Buscar</button></form>${visible.length?links(visible.map(r=>[r.title,regionPath(r),'Abrir região',r.id==='hogwarts'?'castle':'map'])):empty('Nenhuma região disponível neste filtro.')}`;
+  }
+  function diary(){return `${label('MEUS REGISTROS')}<h1 class="display">Diário</h1><p class="muted">Sua jornada e as histórias que você já pode conhecer.</p>${links([['Missões em Grupo','/portal/missoes/grupo','Jornadas compartilhadas','scroll'],['Histórias Individuais','/portal/missoes/historias','Sua história pessoal','quill'],['Investigações','/portal/investigacoes','Pistas e anotações compartilhadas','book']])}<div class="group">${button('Documentos e recompensas','/portal/documentos','scroll')}${button('Minhas retrospectivas','/portal/retrospectivas','book')}</div>`;}
+  function archives(){return `${label('MEUS ACERVOS')}<h1 class="display">Meus Acervos</h1>${links([['Sapos de Chocolate','/portal/conteudos/chocolatecards','Cartas conhecidas','star'],['Bestiário Encantado','/portal/conteudos/bestiary','Espécies descobertas','book'],['Biblioteca de Raridades','/portal/conteudos/rarities','Obras reveladas','book'],['Recordações do Mundo Bruxo','/portal/conteudos/memories','Memórias e registros','quill'],['Gabinete de Curiosidades','/portal/conteudos/curiosities','Achados e criações','star']])}<div class="group">${button('Pacotes e trocas de Sapos','/portal/sapos','star')}${!state.view?button('Propor uma curiosidade','/portal/curiosidades/propor','quill'):''}</div>`;}
+  function school(){
+    if(!hasSchool())return empty('Esta região não está disponível para você.');
+    const library=state.portal.locations.some(l=>l.id==='biblioteca');
+    const revealed=state.portal.locations.filter(l=>l.regionId==='hogwarts'&&l.id!=='biblioteca').map(l=>[l.title,'/portal/local/'+l.id,'Local revelado','map']);
+    return `${label('EXPLORAR','Hogwarts')}<h1 class="display">O Castelo de Hogwarts</h1>${links([['Salão Principal','/portal/salao-principal','Comunicados publicados','castle'],...(library?[['Biblioteca','/portal/conteudos/books','Acervo escolar','book']]:[]),['Aulas','/portal/conteudos/lessons','Conteúdos de ensino','book'],['Aulas e Horários','/portal/calendario','Programação do ano letivo','clock'],...(state.portal.character?[['Salão Comunal','/portal/sala-comunal','Sua Casa em Hogwarts','shield']]:[]),['Quadros de Avisos','/portal/avisos','Murais e comunicados','scroll'],...revealed])}<div class="group">${button('Taça das Casas','/portal/taca','shield')}${button('As Quatro Casas','/portal/casas','shield')}${button('Profeta Diário','/portal/profeta','scroll')}${button('Anuários','/portal/anuarios','book')}${button('Pessoas conhecidas','/portal/personagens','user')}${button('Voltar a Explorar','/portal/explorar','map')}</div>`;
+  }
+  function commonRoom(){const p=state.portal.character;return !hasSchool()||!p?empty('Este salão não está disponível para você.'):`${label('HOGWARTS',p.houseName)}<h1 class="display">Salão Comunal</h1><p class="muted">${esc(p.houseName)}</p><img class="common-room-image" src="${esc(p.room)}" alt="Salão comunal de ${esc(p.houseName)}">${button('Voltar a Hogwarts','/portal/hogwarts','castle')}`;}
+  function hall(){return !hasSchool()?empty('Esta região não está disponível para você.'):`${label('HOGWARTS')}<h1 class="display">Salão Principal</h1>${state.portal.news.length?links(state.portal.news.map(n=>[n.title,'/portal/publicacao/'+n.id])):empty('Nenhum comunicado publicado por enquanto.')}<div class="group">${button('Murais','/portal/avisos','scroll')}${button('Voltar a Hogwarts','/portal/hogwarts','castle')}</div>`;}
+  function attach(root){root.addEventListener('submit',e=>{if(!e.target.matches('[data-explore-search]'))return;e.preventDefault();query=String(new FormData(e.target).get('q')??'').trim().slice(0,120);state.dirty=false;render();root.querySelector('[data-explore-search] input')?.focus();});}
+  return {home,explore,diary,archives,school,commonRoom,hall,attach,remember};
+}
