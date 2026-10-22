@@ -55,6 +55,8 @@ Para um banco libSQL **novo e vazio**, [deployment/bootstrap-empty.sql](../deplo
 
 Use um executor que envie o **script completo na mesma transação** e interrompa ao encontrar um erro. Confira a opção de execução de lote do console; um botão que executa apenas a instrução sob o cursor não basta. A consulta final deve retornar `migrations=20`, `casas=4` e `personagens=5` nesta versão. A proteção inicial recusa bancos que já tenham tabelas. Havendo erro, interrompa e faça rollback da transação antes de qualquer nova tentativa.
 
+No console **Drizzle Studio** integrado ao Turso, use [deployment/bootstrap-studio.sql](../deployment/bootstrap-studio.sql). Esse console informa que já executa múltiplas consultas em uma transação e pode recusar os comandos externos de transação do arquivo genérico. A variante Studio omite somente o controle externo de transação e o PRAGMA de conexão, preservando todas as migrations, os dois gatilhos e o seed. Execute o texto inteiro como lote na transação do console. Se houver erro de análise ou de execução, pare e confira o estado do banco antes de tentar novamente. A versão sem transação externa não deve ser usada por um executor que aplique cada comando com commit individual.
+
 O arquivo é gerado por `npm run db:bootstrap-sql` a partir das migrations e de um seed temporário, sem ler o banco da campanha. Os testes verificam que o arquivo publicado corresponde ao gerador e produz a estrutura esperada pelo cliente libSQL. Para atualizar uma instalação existente, use `npm run db:migrate`.
 
 ### Transferência de uma campanha local existente

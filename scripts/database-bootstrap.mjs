@@ -8,7 +8,7 @@ const literal=value=>value===null?'NULL':typeof value==='number'?String(value):"
 
 // Build only from bundled migrations and a disposable canonical seed. Never
 // read the campaign's database, credentials or invitations for this artifact.
-export async function databaseBootstrapSQL(migrationsDir=resolve('migrations')) {
+export async function databaseBootstrapSQL(migrationsDir=resolve('migrations'),{studio=false}={}) {
   const directory=await mkdtemp(join(tmpdir(),'hogwarts-bootstrap-'));
   let db;
   try {
@@ -17,9 +17,8 @@ export async function databaseBootstrapSQL(migrationsDir=resolve('migrations')) 
     const chunks=[
       '-- Hogwarts 1890: inicializacao de um banco libSQL NOVO e VAZIO.',
       '-- Gerado por npm run db:bootstrap-sql. Nenhum token, senha ou convite.',
-      '-- Executar o lote completo em uma transacao, interrompendo em caso de erro.',
-      'PRAGMA foreign_keys=ON;',
-      'BEGIN IMMEDIATE;',
+      studio?'-- Drizzle Studio: executar TODO o texto como lote; o console abre a transacao.':'-- Executar o lote completo em uma transacao, interrompendo em caso de erro.',
+      ...(studio?[]:['PRAGMA foreign_keys=ON;','BEGIN IMMEDIATE;']),
       'CREATE TABLE hogwarts_bootstrap_guard(empty INTEGER NOT NULL CHECK(empty=0));',
       "INSERT INTO hogwarts_bootstrap_guard SELECT count(*) FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'hogwarts_bootstrap_guard';",
       'DROP TABLE hogwarts_bootstrap_guard;',
@@ -36,7 +35,8 @@ export async function databaseBootstrapSQL(migrationsDir=resolve('migrations')) 
         chunks.push('INSERT OR IGNORE INTO "'+name+'"('+columns.map(column=>'"'+column+'"').join(',')+') VALUES('+columns.map(column=>literal(row[column])).join(',')+');');
       }
     }
-    chunks.push('COMMIT;','SELECT (SELECT count(*) FROM schema_migrations) AS migrations, (SELECT count(*) FROM houses) AS casas, (SELECT count(*) FROM characters) AS personagens;');
+    if(!studio)chunks.push('COMMIT;');
+    chunks.push('SELECT (SELECT count(*) FROM schema_migrations) AS migrations, (SELECT count(*) FROM houses) AS casas, (SELECT count(*) FROM characters) AS personagens;');
     return chunks.join('\n')+'\n';
   } finally {
     db?.close();
@@ -48,5 +48,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const path=resolve(process.argv[2]??'deployment/bootstrap-empty.sql');
   await mkdir(dirname(path),{recursive:true});
   await writeFile(path,await databaseBootstrapSQL());
+  const studioPath=join(dirname(path),'bootstrap-studio.sql');
+  await writeFile(studioPath,await databaseBootstrapSQL(resolve('migrations'),{studio:true}));
   console.log('SQL de inicializacao sem segredos: '+path);
+  console.log('SQL para lote transacional do Drizzle Studio: '+studioPath);
 }
