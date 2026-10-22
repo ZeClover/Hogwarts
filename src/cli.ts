@@ -1,6 +1,6 @@
 import { backup } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, cpSync } from 'node:fs';
+import { mkdirSync, cpSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { configuration } from './config.ts';
 import { openDatabase, one, transaction, audit } from './db.ts';
@@ -27,6 +27,7 @@ try {
     mkdirSync(directory,{recursive:true,mode:0o700});
     await backup(db,join(directory,'hogwarts.sqlite'));
     cpSync(join(config.dataDir,'media'),join(directory,'media'),{recursive:true});
+    if(existsSync(join(config.dataDir,'backup.key')))cpSync(join(config.dataDir,'backup.key'),join(directory,'backup.key'));
     console.log(`Backup privado: ${directory}`);
   } else throw new Error('Use migrate, master-invite email@exemplo.com ou backup [diretório].');
 } catch (error) {

@@ -1,3 +1,4 @@
+import {templateChoices,templateSnapshot,type TemplateSnapshot} from './templates-model.ts';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {join,basename} from 'node:path';
@@ -11,7 +12,7 @@ import {fields,jsonBody,record,text,stringIds,send} from './http.ts';
 import {exists,expected,policyAllows,type Policy} from './editorial.ts';
 import type {Config} from './config.ts';
 
-type Certificate={fullName:string;title:string;participation:string;actions:string;result:string;closingText:string;signature:string;date:string;fileId:string|null;layout:string};
+type Certificate={fullName:string;title:string;participation:string;actions:string;result:string;closingText:string;signature:string;date:string;fileId:string|null;layout:string;templateId?:string|null;template?:TemplateSnapshot|null};
 export type RewardPlan={kind:string;referenceId:string|null;title:string;text:string;nuques:number;characters:string[]};
 type RewardHandler={validate:(db:DB,plan:RewardPlan)=>void;apply:(db:DB,actor:Session,plan:RewardPlan,character:string,key:string)=>Record<string,unknown>};
 const handlers=new Map<string,RewardHandler>();
@@ -21,21 +22,21 @@ const planRow=(db:DB,id:string)=>one(db,'SELECT * FROM reward_plans WHERE id=?',
 function quest(db:DB,id:string){return one(db,'SELECT * FROM quests WHERE id=?',id)??fail(404,'Missão não encontrada.');}
 function member(db:DB,questId:string,id:string){exists(db,'characters',id);if(!one(db,'SELECT character_id FROM quest_participants WHERE quest_id=? AND character_id=?',questId,id))fail(422,'Selecione um participante registrado nesta missão.');}
 function validateCertificate(db:DB,value:unknown):Certificate{
- const p=record(value);fields(p,['fullName','title','participation','actions','result','closingText','signature','date','fileId','layout']);
+ const p=record(value);fields(p,['fullName','title','participation','actions','result','closingText','signature','date','fileId','layout','templateId']);
  if(!['SUCCESS','PARTIAL_SUCCESS','FAILURE'].includes(String(p.result)))fail(400,'Escolha o desfecho.');
  if(!['PARCHMENT','FORMAL'].includes(String(p.layout)))fail(400,'Escolha o modelo.');
  const fileId=p.fileId===null?null:text(p.fileId,100);if(fileId)exists(db,'workshop_files',fileId);
- return {fullName:text(p.fullName,160),title:text(p.title,180),participation:text(p.participation,2000,false),actions:text(p.actions,3000,false),result:String(p.result),closingText:text(p.closingText,2000,false),signature:text(p.signature,200,false),date:text(p.date,100,false),fileId,layout:String(p.layout)};
+ return {fullName:text(p.fullName,160),title:text(p.title,180),participation:text(p.participation,2000,false),actions:text(p.actions,3000,false),result:String(p.result),closingText:text(p.closingText,2000,false),signature:text(p.signature,200,false),date:text(p.date,100,false),fileId,layout:String(p.layout),templateId:typeof p.templateId==='string'?p.templateId:null,template:templateSnapshot(db,p.templateId,'CERTIFICATE')};
 }
 const results:Record<string,string>={SUCCESS:'Sucesso',PARTIAL_SUCCESS:'Sucesso parcial',FAILURE:'Fracasso'};
 async function pdf(db:DB,config:Config,p:Certificate){
  const doc=await PDFDocument.create();doc.registerFontkit(fontkit);const font=await doc.embedFont(await readFile('resources/fonts/DejaVuSerif.ttf'),{subset:true});
- const supported=new Set(font.getCharacterSet());for(const value of Object.values(p))if(typeof value==='string')for(const char of value){if(!supported.has(char.codePointAt(0)!)&&!/\s/u.test(char))fail(422,'O certificado contém um caractere sem representação na fonte.');}
- let page=doc.addPage([595.28,841.89]),y=762;const bronze=rgb(.42,.29,.13),ink=rgb(.16,.12,.08);
- const decorate=()=>{page.drawRectangle({x:0,y:0,width:595.28,height:841.89,color:p.layout==='PARCHMENT'?rgb(.97,.94,.85):rgb(1,1,1)});page.drawRectangle({x:28,y:28,width:539.28,height:785.89,borderWidth:1,borderColor:bronze});};decorate();
+ const supported=new Set(font.getCharacterSet());for(const value of [...Object.values(p),...Object.values(p.template??{})])if(typeof value==='string')for(const char of value){if(!supported.has(char.codePointAt(0)!)&&!/\s/u.test(char))fail(422,'O certificado contém um caractere sem representação na fonte.');}
+ let page=doc.addPage([595.28,841.89]),y=762;const tone=p.template?.tone,bronze=tone==='BURGUNDY'?rgb(.40,.1,.16):tone==='FOREST'?rgb(.15,.32,.2):tone==='MIDNIGHT'?rgb(.15,.2,.35):rgb(.42,.29,.13),ink=rgb(.16,.12,.08);
+ const decorate=()=>{page.drawRectangle({x:0,y:0,width:595.28,height:841.89,color:(p.template?p.template.variant!=='FORMAL':p.layout==='PARCHMENT')?rgb(.97,.94,.85):rgb(1,1,1)});page.drawRectangle({x:28,y:28,width:539.28,height:785.89,borderWidth:1,borderColor:bronze});};decorate();
  const line=(value:string,size:number)=>{let current='';const flush=()=>{if(y<66){page=doc.addPage([595.28,841.89]);decorate();y=762;}page.drawText(current,{x:58,y,size,font,color:ink});y-=size*1.55;};for(const paragraph of value.split('\n')){for(const word of paragraph.split(/\s+/u)){let remaining=word;while(font.widthOfTextAtSize(remaining,size)>475){if(current){flush();current='';}let cut=1;while(cut<remaining.length&&font.widthOfTextAtSize(remaining.slice(0,cut+1),size)<=475)cut++;current=remaining.slice(0,cut);flush();current='';remaining=remaining.slice(cut);}if(font.widthOfTextAtSize((current?current+' ':'')+remaining,size)>475){flush();current='';}current+=(current?' ':'')+remaining;}flush();current='';}y-=12;};
  if(p.fileId){const f=one(db,'SELECT storage_key FROM workshop_files WHERE id=?',p.fileId)!;const bytes=await sharp(await readFile(join(config.dataDir,'media',basename(String(f.storage_key))))).resize(180,100,{fit:'inside'}).png().toBuffer();const image=await doc.embedPng(bytes);page.drawImage(image,{x:(595.28-image.width)/2,y:735-image.height,width:image.width,height:image.height});y=615;}
- line('HOGWARTS · ARQUIVOS MÁGICOS',12);line(p.title,22);line(p.fullName,18);line(results[p.result]!,12);line(p.participation,12);line(p.actions,12);line(p.closingText,12);line([p.date,p.signature].filter(Boolean).join('\n'),11);doc.setTitle(p.title);doc.setAuthor(p.signature||'Hogwarts');return Buffer.from(await doc.save());
+ line(p.template?.heading||'HOGWARTS · ARQUIVOS MÁGICOS',12);line(p.title,22);line(p.fullName,18);line(results[p.result]!,12);line(p.participation,12);line(p.actions,12);line(p.closingText,12);line([p.date,p.signature].filter(Boolean).join('\n'),11);if(p.template?.footer)line(p.template.footer,10);doc.setTitle(p.title);doc.setAuthor(p.signature||'Hogwarts');return Buffer.from(await doc.save());
 }
 function publicIssue(db:DB,row:Row){const c=certificate(db,String(row.certificate_id)),p=JSON.parse(String(row.snapshot_json)) as Certificate;return {id:row.id,questId:c.quest_id,title:p.title,fullName:p.fullName,result:p.result,pdf:'/api/documents/certificates/'+row.id+'/pdf'};}
 function canIssue(db:DB,viewer:Viewer,row:Row){const c=certificate(db,String(row.certificate_id));return !!row.released&&(c.character_id===viewer.characterId||(JSON.parse(String(row.shares_json)) as string[]).includes(viewer.characterId??''));}
@@ -59,7 +60,7 @@ function sendPDF(res:ServerResponse,bytes:Buffer){res.writeHead(200,{'Content-Ty
 export async function handleDocuments(req:IncomingMessage,res:ServerResponse,url:URL,db:DB,config:Config,session?:Session):Promise<boolean>{
  const path=url.pathname,method=req.method??'GET',admin=path.startsWith('/api/master/documents');if(!admin&&!path.startsWith('/api/documents'))return false;
  const actor=requireSession(session);if(admin){requireMaster(actor);if(url.searchParams.has('view_as'))fail(403,'Saia da prévia para administrar.');
-  if(path==='/api/master/documents/context'&&method==='GET'){send(res,200,{rewardKinds:[...handlers.keys()],collections:all(db,"SELECT id,kind,status,draft_json FROM content_records WHERE kind IN('chocolatecards','bestiary','rarities','memories','curiosities')").map(r=>({id:r.id,kind:r.kind,status:r.status,name:JSON.parse(String(r.draft_json)).title})),items:all(db,'SELECT id,draft_json,status FROM catalog_items').map(r=>({id:r.id,name:JSON.parse(String(r.draft_json)).name,status:r.status}))});return true;}
+  if(path==='/api/master/documents/context'&&method==='GET'){send(res,200,{templates:templateChoices(db,'CERTIFICATE'),rewardKinds:[...handlers.keys()],collections:all(db,"SELECT id,kind,status,draft_json FROM content_records WHERE kind IN('chocolatecards','bestiary','rarities','memories','curiosities')").map(r=>({id:r.id,kind:r.kind,status:r.status,name:JSON.parse(String(r.draft_json)).title})),items:all(db,'SELECT id,draft_json,status FROM catalog_items').map(r=>({id:r.id,name:JSON.parse(String(r.draft_json)).name,status:r.status}))});return true;}
   const match=path.match(/^\/api\/master\/documents\/quests\/([\w-]+)\/(certificates|rewards)(?:\/([\w-]+)(?:\/(preview|issue|grant))?)?$/);
   if(match){const qid=match[1]!,kind=match[2]!,id=match[3],action=match[4];quest(db,qid);
    if(!id&&method==='GET'){send(res,200,{items:all(db,kind==='certificates'?'SELECT * FROM quest_certificates WHERE quest_id=?':'SELECT * FROM reward_plans WHERE quest_id=?',qid).map(row=>kind==='certificates'?adminCertificate(db,row):adminPlan(db,row))});return true;}

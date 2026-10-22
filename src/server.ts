@@ -25,6 +25,8 @@ import {handleBoards,locationBoards} from './boards.ts';
 import {handleCup} from './cup.ts';
 import {handleCollections} from './collections.ts';
 import {handleInvestigations} from './investigations.ts';
+import {handleArchives} from './archives.ts';
+import './templates.ts';
 import './yearbooks.ts';
 import {handleJournal} from './journal.ts';
 import {handleMail} from './mail.ts';
@@ -143,6 +145,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
         const actor = requireSession(session);
         return send(res,200,{role:actor.role,csrf:actor.csrf,characterId:actor.characterId});
       }
+      if (await handleArchives(req,res,url,db,config,session)) return;
       if (await handleInvestigations(req,res,url,db,session)) return;
       if (await handleJournal(req,res,url,db,config,session)) return;
       if (await handleMail(req,res,url,db,session)) return;
@@ -332,7 +335,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
       const staticFile=path.match(/^\/assets\/([^/]+\.webp)$/);
       let filename:string, mime:string;
       if(staticFile){filename=join(config.publicDir,'assets',basename(decodeURIComponent(staticFile[1]!)));mime='image/webp';res.setHeader('Cache-Control','public, max-age=3600');}
-      else if(['/style.css','/app.js','/workshop.js','/npcs.js','/items.js','/campaign.js','/delivery.js','/documents.js','/content.js','/commerce.js','/content-extensions.js','/library.js','/calendar.js','/boards.js','/cup.js','/collections.js','/investigations.js','/mail.js','/chocolate.js','/editorial-ui.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
+      else if(['/style.css','/app.js','/workshop.js','/npcs.js','/items.js','/campaign.js','/delivery.js','/documents.js','/content.js','/commerce.js','/content-extensions.js','/library.js','/calendar.js','/boards.js','/cup.js','/collections.js','/archives.js','/templates.js','/investigations.js','/mail.js','/chocolate.js','/editorial-ui.js'].includes(path)){filename=join(config.publicDir,path.slice(1));mime=extname(path)==='.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';}
       else if(path==='/'||path==='/ativar'||path==='/entrar'||/^\/portal(?:\/[a-zA-Z0-9-]+)*$/.test(path)){filename=join(config.publicDir,'index.html');mime='text/html; charset=utf-8';}
       else fail(404,'Página não encontrada.');
       const bytes=await readFile(filename).catch(()=>fail(404,'Arquivo não encontrado.'));

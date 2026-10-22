@@ -50,6 +50,6 @@ export async function fixture() {
   const atlas=await client().activate(await invite('atlas'),'atlas@test.invalid');
   const eiris=await client().activate(await invite('eiris'),'eiris@test.invalid');
   return {...app,client,master,atlas,eiris,invite,password,
-    async close(){await new Promise(resolve=>app.server.close(resolve));app.db.close();await rm(directory,{recursive:true,force:true});}
+    async close(){await new Promise(resolve=>{app.server.close(resolve);app.server.closeAllConnections();});app.db.close();await rm(directory,{recursive:true,force:true});}
   };
 }

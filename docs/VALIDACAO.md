@@ -1,5 +1,7 @@
 # Evidências de validação F0/F1
 
+Validação consolidada das quinze oficinas: [F5_2_ENTREGA.md](F5_2_ENTREGA.md). As evidências abaixo preservam a entrega original da fundação.
+
 Verificado em 21/10/2026, Node.js 24.19.0, Chromium headless. Os testes usam bancos SQLite temporários e os removem ao terminar; não deixam usuários, convites, cartas, artigos ou narrativa no banco da aplicação.
 
 | Verificação | Resultado |

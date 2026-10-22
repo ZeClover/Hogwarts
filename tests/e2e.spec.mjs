@@ -52,7 +52,7 @@ test('login, teclado, perfil e região fechada em desktop e celular',async({page
   await expect(page.locator('.portrait')).toHaveAttribute('src','/assets/gryffindor.webp');
   await page.getByLabel('Biografia',{exact:true}).fill('');await page.getByRole('button',{name:'Salvar biografia'}).click();
   await page.emulateMedia({reducedMotion:'reduce'});
-  expect(await page.locator('.profile-card').evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
+  await expect(page.locator('.profile-card')).toHaveCSS('animation-name','none');
   await accessible(page);expect(errors).toEqual([]);
 });
 

@@ -142,3 +142,12 @@ html{scroll-padding-top:160px}a,button,input,select,textarea{touch-action:manipu
 .content-record.newspapers .head2 {text-align:center;font-size:clamp(1.6rem,5vw,2.6rem);}
 .content-record.newspapers .story-known-entry {border-top:1px solid var(--line);padding-top:1rem;}
 .content-record.newspapers .biography {line-height:1.8;}
+[data-template-variant] {--template-accent:#a78a50;}
+[data-template-tone="BURGUNDY"] {--template-accent:#aa6c72;}
+[data-template-tone="FOREST"] {--template-accent:#789b76;}
+[data-template-tone="MIDNIGHT"] {--template-accent:#8299bf;}
+[data-template-variant="FORMAL"] {border:double 4px var(--template-accent);}
+[data-template-variant="BRONZE"] {border-top:5px solid var(--template-accent);}
+[data-template-variant="SCRAPBOOK"] {border-style:dashed;border-color:var(--template-accent);}
+[data-template-variant="NEWSPAPER"] {border-top:double 6px var(--template-accent);border-bottom:double 6px var(--template-accent);}
+.template-footer {border-top:1px solid var(--template-accent);padding-top:1rem;white-space:pre-wrap;overflow-wrap:anywhere;}

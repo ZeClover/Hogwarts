@@ -19,6 +19,8 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F4.2 — Profeta Diário | Entregue, PR #17 |
 | F5.0 — anuários/retrospectivas | Entregue, PR #18 |
 | F5.1 — investigação coletiva/moderação | Entregue, PR #19 |
-| F5.2 — templates/importação/exportação/qualidade | Autorizada |
+| F5.2 — templates/importação/exportação/qualidade | Entregue, PR #20 |
 
 Decisões de implementação serão resolvidas dentro do escopo aprovado. Dependências pendentes não serão simuladas como concessões ou transações prontas. [Backlog vinculante](BACKLOG_OFICINAS.md).
+
+Escopo F0–F5 concluído: [matriz final e validação](F5_2_ENTREGA.md), [guia de operação do Mestre](GUIA_DO_MESTRE.md). 159 testes de servidor e 27 cenários de navegador aprovados. As PRs continuam separadas e encadeadas, sem merge/deploy; V4 e Hub preservados.
