@@ -1,3 +1,5 @@
+import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
+import {attachQuickCreate} from '/quick-create.js';
 import {primarySections,playerSection,createPlayerPages} from '/player-navigation.js';
 import { createWorkshop } from '/workshop.js';
 import { createNPCOffice } from '/npcs.js';
@@ -20,6 +22,8 @@ import {createCommerceOffice} from '/commerce.js';
 const root = document.querySelector('#root');
 const state = { session: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 let toastTimer;
+attachQuickCreate(root,{api,state,navigate,render,toast});
+attachEditorTabs(root);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iconPaths = {
  castle:'M3 21h18M5 21V7l3 2V4l4-2 4 2v5l3-2v14M9 21v-6h6v6M11 8h2M11 11h2',
@@ -96,7 +100,7 @@ async function api(path, {method='GET', body, preview=true, raw=false}={}) {
 function pathWithView(path) { return `${path}${state.view?`?view_as=${encodeURIComponent(state.view)}`:''}`; }
 async function navigate(path, replace=false) {
   history.replaceState({...history.state,scrollY:window.scrollY},'');
-  state.page=path;state.detail=null;state.dirty=false;
+  state.page=path;state.detail=null;state.dirty=false;state.fullCreate=false;
   history[replace?'replaceState':'pushState']({scrollY:0},'',pathWithView(path));
   await loadPage();playerPages.remember(path);render();
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
@@ -241,6 +245,7 @@ function render() {
   document.documentElement.dataset.house=state.portal.character?.house??'master';
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
   root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
+  enhanceQuestEditor(root,state);
 }
 async function preview(id) {
   if(state.session.role!=='MASTER')throw new Error('Acesso reservado ao Mestre.');
