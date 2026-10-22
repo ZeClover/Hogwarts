@@ -47,7 +47,19 @@ npm run db:migrate
 npm run master:invite -- mestre@seu-dominio.com
 ```
 
-As migrations são executadas explicitamente antes da publicação, fora de requisições e do build. O convite inicial é privado, expira em uma hora e só pode ser criado enquanto não houver um Mestre. Havendo campanha local, atualize primeiro essa instalação para as mesmas migrations, gere um novo backup e preserve a chave original. Restaure esse backup pelo painel após criar a conta e testar a instalação isoladamente. A recuperação mantém as contas, sessões e auditoria do destino; recrie os convites dos jogadores nesse ambiente.
+As migrations são executadas explicitamente antes da publicação, fora de requisições e do build. O convite inicial é privado, expira em uma hora e só pode ser criado enquanto não houver um Mestre.
+
+### Transferência de uma campanha local existente
+
+A recuperação cifrada do painel preserva as contas do destino e exige vínculos compatíveis. Para transferir uma instalação existente, preserve os IDs originais das contas e dos arquivos por meio da cópia operacional completa, antes de criar contas no destino:
+
+1. Pare o servidor local e execute `npm run backup -- /caminho/privado`. Preserve banco, `media/` e `backup.key` juntos.
+2. Crie um banco libSQL novo e vazio a partir do SQLite dessa cópia: `turso db create hogwarts-production --from-file /caminho/privado/hogwarts.sqlite`. A [documentação oficial](https://docs.turso.tech/cli/db/create) limita esse arquivo a 2 GB. Configure as credenciais desse banco no destino.
+3. Envie os arquivos de `media/` ao Blob privado mantendo cada nome, sob `HOGWARTS_STORAGE_PREFIX/media/`. Preserve os mesmos UUIDs; confira os arquivos antes de liberar o acesso.
+4. Configure `BACKUP_ENCRYPTION_KEY` com os bytes da chave original em base64 e execute `npm run db:migrate` com as variáveis do destino. As contas existentes conservam seus IDs e hashes de senha; entre com essas contas, sem emitir outro convite inicial.
+5. Teste a instalação isoladamente, incluindo imagens, PDFs, permissões e backup. Mantenha a cópia local intacta até concluir essa validação. Planos de revisão temporários precisam ser preparados novamente no destino.
+
+Não aplique um backup cifrado antigo sobre um banco com contas recriadas e IDs diferentes: a verificação dos vínculos pode recusar a recuperação. Para uma campanha nova, use o fluxo de convite inicial descrito acima.
 
 Publique a branch que contém esta adaptação ou integre as PRs na ordem das dependências antes de publicar `main`. Não use a `main` provisória como evidência de entrega das oficinas. A PR anterior e o Hub RPG permanecem preservados.
 
