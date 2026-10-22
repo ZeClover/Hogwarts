@@ -136,8 +136,25 @@ export function createCampaignOffice({api,esc,label,empty,button,state,render,na
     });
   }
   async function poll(){
-    if(isList()){const next=await api(`/api/${management()?'master/':''}campaign/${domain}?${query()}${state.page===sessionBase?'&active=1':''}`);if(JSON.stringify(next)!==JSON.stringify(list)){list=next;render();}}
-    else if(!management()){try{const next=await api(`/api/campaign/${domain}/${current.id}`);if(JSON.stringify(next)!==JSON.stringify(current)){current=next;error=null;render();}}catch(e){if(error!==e.message){error=e.message;render();}}}
+    const path=state.page;
+    if(isList()){
+      const next=await api(`/api/${management()?'master/':''}campaign/${domain}?${query()}${path===sessionBase?'&active=1':''}`);
+      if(state.page!==path)return;
+      if(error||JSON.stringify(next)!==JSON.stringify(list)){list=next;error=null;render();}
+    }else if(!management()){
+      // A denied or missing record has no current object. Retry the requested
+      // route so a later release can become visible without a page reload.
+      const id=path.slice(rootPath().length).split('/').filter(Boolean)[0];
+      try{
+        const next=await api(`/api/campaign/${domain}/${encodeURIComponent(id)}`);
+        if(state.page!==path)return;
+        if(error||JSON.stringify(next)!==JSON.stringify(current)){current=next;error=null;render();}
+      }catch(e){
+        if(state.page!==path)return;
+        current=null;
+        if(error!==e.message){error=e.message;render();}
+      }
+    }
   }
   return {handles,load,page,attach,poll};
 }

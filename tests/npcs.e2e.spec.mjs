@@ -2,12 +2,13 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { fixture } from './helpers.mjs';
+import { settleAnimations } from './browser-helpers.mjs';
 let f;
 test.use({actionTimeout:10_000});
 const base='/portal/mestre/oficinas/npcs';
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots/f2-0b',{recursive:true});});test.afterAll(async()=>{await f?.close();});
 async function login(page,email='master@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
-async function checks(page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
+async function checks(page){await settleAnimations(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
 async function publish(page){await page.getByRole('button',{name:'Revisar publicação do NPC',exact:true}).click();await page.getByRole('button',{name:'Confirmar publicação',exact:true}).press('Enter');await expect(page.locator('#toast')).toContainText('Ação registrada.');}
 async function openFragment(page,title){const detail=page.locator('.npc-fragment').filter({has:page.locator('summary').filter({hasText:title})});if(!await detail.getAttribute('open'))await detail.locator('summary').first().click();return detail;}
 async function reveal(page,title,action='Revelar aos selecionados'){const detail=await openFragment(page,title);const form=detail.locator('[data-npc-form="reveal"]');await form.getByRole('checkbox',{name:'Atlas Black',exact:true}).check();await form.getByRole('button',{name:action,exact:true}).click();await expect(page.locator('#toast')).toContainText('Ação de conhecimento registrada.');}

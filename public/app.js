@@ -6,6 +6,8 @@ import { createDelivery } from '/delivery.js';
 import { createDocumentOffice } from '/documents.js';
 import { createContentOffice } from '/content.js';
 import '/library.js';
+import '/templates.js';
+import {createArchivesOffice} from '/archives.js';
 import {createInvestigationsOffice} from '/investigations.js';
 import {createMailOffice} from '/mail.js';
 import {createChocolateOffice} from '/chocolate.js';
@@ -66,6 +68,8 @@ const mailOffice=createMailOffice({api,esc,label,empty,button,state,render,navig
 mailOffice.attach(root);
 const investigationsOffice=createInvestigationsOffice({api,esc,label,empty,button,state,render,navigate,toast});
 investigationsOffice.attach(root);
+const archivesOffice=createArchivesOffice({api,esc,label,empty,button,state,render,toast});
+archivesOffice.attach(root);
 const delivery=createDelivery({api,state,refresh,navigate,esc});
 function toast(message, error=false) {
   clearTimeout(toastTimer);
@@ -94,6 +98,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  if(archivesOffice.handles(state.page)){await archivesOffice.load();return;}
   if(investigationsOffice.handles(state.page)){await investigationsOffice.load();return;}
   if(mailOffice.handles(state.page)){await mailOffice.load();return;}
   if(chocolateOffice.handles(state.page)){await chocolateOffice.load();return;}
@@ -116,6 +121,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
+  if(!force&&!changed&&!state.dirty&&archivesOffice.handles(state.page)){return;}
   if(!force&&!changed&&!state.dirty&&investigationsOffice.handles(state.page)){await investigationsOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&mailOffice.handles(state.page)){await mailOffice.poll();return;}
   if(!force&&!changed&&!state.dirty&&chocolateOffice.handles(state.page)){await chocolateOffice.poll();return;}
@@ -175,19 +181,6 @@ function placePage() {
   const library=p.kind==='LIBRARY';
   return `${label(library?'VIDA ESCOLAR':'HOGSMEADE')}${mast(p.image,library?'BIBLIOTECA':'ESTABELECIMENTO',p.title)}<h2 class="head2 section-title">${library?'Acervo da Escola':'Catálogo'}</h2>${(p.boards??[]).map(b=>button(b.title,'/portal/conteudos/boards/'+b.id,'scroll')).join('')}${library?button('Abrir Biblioteca','/portal/conteudos/books','book'):''}${p.shops?.length?`<div class="group">${p.shops.map(s=>button(s.title,'/portal/catalogo/'+s.id,'book')).join('')}</div>`:empty(library?'Ainda não há livros liberados neste acervo.':'Nenhum artigo exposto no momento.')}${p.contacts?.length?`<section class="card known-contacts"><h2 class="head3">Pessoas conhecidas neste local</h2><div class="group">${p.contacts.map(n=>button(n.name,'/portal/personagens/'+n.id,'user')).join('')}</div></section>`:''}`;
 }
-const futurePages={
- correio:['/assets/correio_carta_hogwarts.webp','CORREIO BRUXO','Correspondências','Nenhuma carta recebida.'],
- calendario:['/assets/hogwarts_saguão.webp','VIDA ESCOLAR','Calendário Escolar','Nenhum evento publicado.'],
- avisos:['/assets/hogwarts_corredor_velas.webp','HOGWARTS','Quadros de Avisos','Nenhum comunicado publicado.'],
- colecoes:['/assets/biblioteca_hogwarts.webp','MEUS ACERVOS','Coleções','Nenhuma coleção revelada.'],
- investigacoes:['/assets/hogwarts_saguão.webp','MEUS REGISTROS','Investigações','Nenhuma investigação revelada.'],
- recordacoes:['/assets/correio_pergaminhos.webp','MEUS ACERVOS','Recordações','Ainda não há recordações registradas.'],
- profeta:['/assets/correio_pergaminhos.webp','MUNDO BRUXO','O Profeta Diário','Nenhuma edição publicada.']
-};
-function future(page) {
-  const [image,kicker,title,message]=futurePages[page];
-  return `${label(kicker)}${mast(image,kicker,title)}${empty(message)}${page==='correio'?button('O Profeta Diário','/portal/profeta','book'):''}`;
-}
 function houses() {
   return `${label('VIDA ESCOLAR')}<h1 class="display">As Quatro Casas</h1><div class="crests-row">${[['gryffindor','Grifinória'],['hufflepuff','Lufa-Lufa'],['ravenclaw','Corvinal'],['slytherin','Sonserina']].map(([id,name])=>`<section class="house-card"><img src="/assets/${id}.webp" alt="Brasão de ${name}"><h2>${name}</h2></section>`).join('')}</div>`;
 }
@@ -217,6 +210,7 @@ function auditLabel(action) {
   return ({BOOTSTRAP_INVITE:'Convite inicial criado',INVITE_ACCEPTED:'Convite aceito',INVITE_CREATED:'Convite criado',INVITE_REVOKED:'Convite revogado',REGION_ACCESS_UPDATED:'Acesso de região atualizado',LOCATION_ACCESS_UPDATED:'Visibilidade de local atualizada',SECRET_LOCATION_CREATED:'Local secreto criado',GROUP_UPDATED:'Grupo atualizado',CHARACTER_UPDATED:'Personagem atualizado',PROFILE_UPDATED:'Biografia atualizada',PHOTO_UPDATED:'Foto atualizada',PHOTO_REMOVED:'Foto removida',ACCOUNT_DISABLED:'Conta suspensa',ACCOUNT_ENABLED:'Conta reativada'})[action]??action;
 }
 function pageContent() {
+  if(archivesOffice.handles(state.page))return archivesOffice.page();
   if(investigationsOffice.handles(state.page))return investigationsOffice.page();
   if(mailOffice.handles(state.page))return mailOffice.page();
   if(chocolateOffice.handles(state.page))return chocolateOffice.page();
@@ -241,7 +235,6 @@ function pageContent() {
   if(page==='local')return placePage();
   if(page==='casas')return houses();
   if(page==='publicacao')return state.detail?`${label('NOVIDADES')}<h1 class="display">${esc(state.detail.title)}</h1><article class="card publication">${esc(state.detail.body)}</article>`:empty('Publicação indisponível.');
-  if(futurePages[page])return future(page);
   return `${label('ARQUIVOS MÁGICOS')}${empty('Esta página não foi encontrada.')}${button('Voltar ao início','/portal/inicio')}`;
 }
 function render() {

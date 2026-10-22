@@ -1,0 +1,2 @@
+import {registerContentExtension} from '/content-extensions.js';
+registerContentExtension(['templates'],{panel({current,esc}){const p=current.payload;return `<section class="card quest-operation-panel" data-template-variant="${esc(p.variant)}" data-template-tone="${esc(p.tone)}"><p class="eyebrow">${esc(p.heading)}</p><h2 class="head2">Prévia do modelo salvo</h2><p class="biography">O conteúdo da campanha será exibido com esta composição.</p><p class="template-footer">${esc(p.footer)}</p></section>`;}});
