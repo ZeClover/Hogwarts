@@ -35,7 +35,7 @@ test('login, teclado, perfil e região fechada em desktop e celular',async({page
   await page.screenshot({path:'docs/screenshots/inicio-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});await noOverflow(page);await accessible(page);
   await page.screenshot({path:'docs/screenshots/inicio-mobile.png',fullPage:true});
-  await page.locator('.navigation').getByRole('link',{name:'Hogsmeade',exact:true}).click();
+  await page.goto(f.config.origin+'/portal/hogsmeade');
   await expect(page.getByRole('heading',{name:'A vila está inacessível.'})).toBeVisible();
   await expect(page.locator('.location-dot')).toHaveCount(0);
   await page.screenshot({path:'docs/screenshots/hogsmeade-fechada-mobile.png',fullPage:true});
@@ -69,11 +69,11 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
   await regionForm.getByRole('button',{name:'Salvar acesso'}).click();
   await expect(page.locator('#toast')).toContainText('Alterações salvas.');
   await page.evaluate(()=>{window.__noReload=1;});
-  for(const [id,house,room] of [['atlas','gryffindor','sala_grifinoria'],['eiris','hufflepuff','sala_lufalufa'],['drake','ravenclaw','sala_corvinal'],['vane','slytherin','sala_sonserina']]){
+  for(const [id,house] of [['atlas','gryffindor','sala_grifinoria'],['eiris','hufflepuff','sala_lufalufa'],['drake','ravenclaw','sala_corvinal'],['vane','slytherin','sala_sonserina']]){
     await page.locator('#preview-select').selectOption(id);
     await expect(page.locator('html')).toHaveAttribute('data-house',house);
     await expect(page.locator('.preview-bar')).toContainText('somente leitura');
-    expect(await page.locator('.hero').evaluate(el=>getComputedStyle(el,'::before').backgroundImage)).toContain(room);
+    await expect(page.locator('.player-welcome img')).toHaveAttribute('src','/assets/'+house+'.webp');
     expect(await page.evaluate(()=>window.__noReload)).toBe(1);
     await assetsHealthy(page);await accessible(page);
     await page.screenshot({path:`docs/screenshots/casa-${house}.png`,fullPage:true});
@@ -81,7 +81,7 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
     await expect(page.locator('#preview-select')).toBeVisible();
   }
   await page.locator('#preview-select').selectOption('atlas');
-  await page.locator('.navigation').getByRole('link',{name:'Hogsmeade',exact:true}).click();
+  await page.locator('.navigation').getByRole('link',{name:'Explorar',exact:true}).click();await page.getByRole('link',{name:'Hogsmeade Abrir região'}).click();
   await expect(page.locator('.location-dot')).toHaveCount(4);
   await page.screenshot({path:'docs/screenshots/hogsmeade-desktop.png',fullPage:true});
   await page.getByRole('link',{name:'Olivaras',exact:true}).first().click();
@@ -95,7 +95,7 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
   await page.screenshot({path:'docs/screenshots/mestre-mobile.png',fullPage:true});
   // A different authenticated player remains barred from the selected region.
   const context=await browser.newContext({viewport:{width:390,height:844}});const other=await context.newPage();
-  await login(other,'eiris@test.invalid');await other.locator('.navigation').getByRole('link',{name:'Hogsmeade',exact:true}).click();
+  await login(other,'eiris@test.invalid');await other.goto(f.config.origin+'/portal/hogsmeade');
   await expect(other.getByRole('heading',{name:'A vila está inacessível.'})).toBeVisible();await context.close();
   expect(errors).toEqual([]);
 });

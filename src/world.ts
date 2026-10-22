@@ -65,7 +65,13 @@ export async function regionMap(db: DB, v: Viewer, id: string) {
     if (!native || !await regionVisible(db, v, native))
         fail(404, 'Região não encontrada.');
     const row = await one(db, "SELECT * FROM content_records WHERE id=? AND kind='regions'", id);
-    return { id: native.id, title: native.title, image: native.file_id ? '/api/content/regions/' + id + '/image' : '/assets/' + String(row?.published_json ? contentPayload(row).asset : 'hogsmeade_mapa_limpo.webp'), locations: await mapAsync((await filterAsync((await all(db, 'SELECT * FROM locations WHERE region_id=?', id)), async (r) => await locationVisible(db, v, r))), async (r) => ({ ...locationDTO(r), destination: r.destination, href: r.destination === 'BOARD' && await locationBoardId(db, v, String(r.id)) ? '/portal/conteudos/boards/' + await locationBoardId(db, v, String(r.id)) : r.destination === 'CATALOG' && (await locationShops(db, v, String(r.id))).length ? '/portal/catalogo/' + (await locationShops(db, v, String(r.id)))[0]!.id : '/portal/local/' + r.id })) };
+    const locations = await filterAsync(await all(db, 'SELECT * FROM locations WHERE region_id=?', id), r => locationVisible(db, v, r));
+    return { id: native.id, title: native.title, image: native.file_id ? '/api/content/regions/' + id + '/image' : '/assets/' + String(row?.published_json ? contentPayload(row).asset : 'hogsmeade_mapa_limpo.webp'), locations: await mapAsync(locations, async r => {
+        const shops = r.kind === 'SHOP' || r.destination === 'CATALOG' ? await locationShops(db, v, String(r.id)) : [];
+        const board = r.destination === 'BOARD' ? await locationBoardId(db, v, String(r.id)) : null;
+        const href = board ? '/portal/conteudos/boards/' + board : shops.length === 1 || r.destination === 'CATALOG' && shops.length ? '/portal/catalogo/' + shops[0]!.id : '/portal/local/' + r.id;
+        return { ...locationDTO(r), destination: r.destination, href };
+    }) };
 }
 export async function locationShops(db: DB, v: Viewer, id: string) { return (await filterAsync((await all(db, "SELECT * FROM content_records WHERE kind='shops'")), async (r) => await contentAllowed(db, v, r) && contentPayload(r).locationId === id)).map(r => ({ id: r.id, title: contentPayload(r).title })); }
 async function locationBoardId(db: DB, v: Viewer, id: string) { const board = await findAsync((await all(db, "SELECT * FROM content_records WHERE kind='boards'")), async (r) => r.published_json && contentPayload(r).locationId === id && await contentAllowed(db, v, r)); return board?.id ?? null; }

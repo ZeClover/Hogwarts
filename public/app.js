@@ -1,3 +1,4 @@
+import {primarySections,playerSection,createPlayerPages} from '/player-navigation.js';
 import { createWorkshop } from '/workshop.js';
 import { createNPCOffice } from '/npcs.js';
 import { createItemOffice } from '/items.js';
@@ -40,6 +41,8 @@ const ico = (name, size=20) => `<svg width="${size}" height="${size}" viewBox="0
 const label = (left, right=state.portal?.calendar?.academicYearLabel??'1890–1891') => `<div class="subtop"><span class="eyebrow">${esc(left)}</span><span class="breadcrumbs">${esc(right)}</span></div>`;
 const empty = message => `<div class="vacant slim">${ico('star',30)}<span>${esc(message)}</span></div>`;
 const button = (title, page, icon='arrow', extra='') => `<button class="btn ghost ${extra}" data-go="${page}">${ico(icon,16)} ${esc(title)}</button>`;
+const playerPages=createPlayerPages({state,esc,ico,label,empty,button,pathWithView,render});
+playerPages.attach(root);
 const workshop=createWorkshop({api,esc,ico,label,empty,button,state,render,navigate,toast});
 workshop.attach(root);
 const npcOffice=createNPCOffice({api,esc,ico,label,empty,button,state,render,navigate,toast});
@@ -92,9 +95,10 @@ async function api(path, {method='GET', body, preview=true, raw=false}={}) {
 }
 function pathWithView(path) { return `${path}${state.view?`?view_as=${encodeURIComponent(state.view)}`:''}`; }
 async function navigate(path, replace=false) {
+  history.replaceState({...history.state,scrollY:window.scrollY},'');
   state.page=path;state.detail=null;state.dirty=false;
-  history[replace?'replaceState':'pushState']({},'',pathWithView(path));
-  await loadPage();render();
+  history[replace?'replaceState':'pushState']({scrollY:0},'',pathWithView(path));
+  await loadPage();playerPages.remember(path);render();
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
@@ -149,23 +153,12 @@ function authPage() {
 }
 function header() {
   const p=state.portal.character, isMaster=state.session.role==='MASTER'&&!state.view;
-  const links=[['Início','inicio'],['Hogwarts','hogwarts'],['Hogsmeade','hogsmeade'],['Acervos','acervos'],['Correio','correio']];
-  return `<header class="top"><a class="brand" href="${pathWithView('/portal/inicio')}" data-go="/portal/inicio"><img src="/assets/hogwarts.webp" alt=""><div class="brand-title">Hogwarts <small>1890 · Arquivos Mágicos</small></div></a><nav class="navigation" aria-label="Principal">${links.map(([name,page])=>`<a href="${pathWithView('/portal/'+page)}" data-go="/portal/${page}" ${state.page==='/portal/'+page?'aria-current="page"':''}>${name}</a>`).join('')}</nav><div class="persona">${p?`<a class="persona-link" href="${pathWithView('/portal/perfil')}" data-go="/portal/perfil"><img src="${esc(p.crest)}" alt=""><span>${esc(p.name)}<small>${esc(p.houseName)}</small></span></a>`:`<a class="persona-link" href="/portal/mestre" data-go="/portal/mestre">${ico('shield',27)}<span>Mestre<small>Arquivos Mágicos</small></span></a>`}<button class="icon-button" data-action="logout" aria-label="Sair da conta" title="Sair">${ico('exit',19)}</button></div></header>${state.view?`<aside class="preview-bar"><span>${ico('eye',18)} Visualizando ${esc(p?.name)} · somente leitura</span><button class="btn ghost small" data-action="end-preview">Voltar ao Mestre</button></aside>`:isMaster?`<div class="master-bar"><div class="admin-bar-links"><a href="/portal/mestre" data-go="/portal/mestre">${ico('shield',15)} Central da Sessão</a><a href="/portal/mestre/oficinas" data-go="/portal/mestre/oficinas">${ico('book',15)} Oficina Geral</a></div><label>Visualizar como <select id="preview-select" aria-label="Visualizar como personagem"><option value="">Escolher personagem</option>${(state.admin?.characters??[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>`:''}`;
+  const links=primarySections;
+  return `<header class="top"><a class="brand" href="${pathWithView('/portal/inicio')}" data-go="/portal/inicio"><img src="/assets/hogwarts.webp" alt=""><div class="brand-title">Hogwarts <small>1890 · Arquivos Mágicos</small></div></a><nav class="navigation" aria-label="Principal">${links.map(([name,page])=>`<a href="${pathWithView('/portal/'+page)}" data-go="/portal/${page}" ${playerSection(state.page)===page?'aria-current="page"':''}>${name}</a>`).join('')}</nav><div class="persona">${p?`<a class="persona-link" href="${pathWithView('/portal/perfil')}" data-go="/portal/perfil"><img src="${esc(p.crest)}" alt=""><span>${esc(p.name)}<small>${esc(p.houseName)}</small></span></a>`:`<a class="persona-link" href="/portal/mestre" data-go="/portal/mestre">${ico('shield',27)}<span>Mestre<small>Arquivos Mágicos</small></span></a>`}<button class="icon-button" data-action="logout" aria-label="Sair da conta" title="Sair">${ico('exit',19)}</button></div></header>${state.view?`<aside class="preview-bar"><span>${ico('eye',18)} Visualizando ${esc(p?.name)} · somente leitura</span><button class="btn ghost small" data-action="end-preview">Voltar ao Mestre</button></aside>`:isMaster?`<div class="master-bar"><div class="admin-bar-links"><a href="/portal/mestre" data-go="/portal/mestre">${ico('shield',15)} Central da Sessão</a><a href="/portal/mestre/oficinas" data-go="/portal/mestre/oficinas">${ico('book',15)} Oficina Geral</a></div><label>Visualizar como <select id="preview-select" aria-label="Visualizar como personagem"><option value="">Escolher personagem</option>${(state.admin?.characters??[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>`:''}`;
 }
-function imgcard(title, caption, photo, target, icon='star', locked=false) {
-  return `<a class="entry${locked?' locked':''}" href="${pathWithView(target)}" data-go="${target}" style="background-image:linear-gradient(0deg,#1010140f,#10101408),url('${photo}')"><span class="entry-symbol">${ico(icon,22)}</span>${locked?`<span class="card-lock">${ico('lock',13)} Fechada</span>`:''}<strong>${esc(title)}</strong><span>${esc(caption)}</span></a>`;
-}
-function home() {
-  const p=state.portal.character, open=state.portal.regions.find(r=>r.id==='hogsmeade')?.accessible;
-  return `${label('SEUS ARQUIVOS MÁGICOS','Hogwarts · 1890')}<section class="hero" aria-label="Bem-vindo a Hogwarts"><div class="hero-content"><div class="eyebrow">ESCOLA DE MAGIA E BRUXARIA · 1890</div><h1>Hogwarts</h1><p class="hero-name">${esc(p?.name ?? 'Arquivos Mágicos')}</p><div class="hero-sub">${esc(p?`${p.houseName}${p.year?' · '+p.year+'º ano':''}`:'As histórias do seu mundo bruxo')}</div></div><img class="hero-crest" src="${esc(p?.crest ?? '/assets/hogwarts.webp')}" alt="${esc(p?'Brasão de '+p.houseName:'Brasão de Hogwarts')}"></section><div class="home-entry">${imgcard('Hogwarts','Vida escolar','/assets/hogwarts_saguão.webp','/portal/hogwarts','castle')}${imgcard('Hogsmeade',open?'Explorar a vila':'A vila está inacessível','/assets/hogsmeade_rua.webp','/portal/hogsmeade','map',!open)}${imgcard('Acervos','Coleções e registros','/assets/biblioteca_hogwarts.webp','/portal/acervos','book')}</div><div class="afterhome"><section class="card note-panel"><header><h2 class="head3">Novidades</h2><span class="kicker">${esc(state.portal.calendar.academicYearLabel)}</span></header>${state.portal.news.length?state.portal.news.map(n=>`<a class="news-row" href="${pathWithView('/portal/publicacao/'+n.id)}" data-go="/portal/publicacao/${esc(n.id)}"><span>${ico('mail',19)} ${esc(n.title)}</span>${ico('arrow',16)}</a>`).join(''):'<div class="no-news"><span class="news-mark">✧</span><p>Nenhuma novidade por enquanto.</p></div>'}</section><section class="card note-panel"><header><h2 class="head3">Acesso rápido</h2></header><div class="quick">${[['Meu perfil','perfil','user'],['Missões','missoes','scroll'],['Correio','correio','mail'],['Calendário','calendario','clock']].map(([title,page,icon])=>`<button data-go="/portal/${page}">${ico(icon,18)} ${title}<small>›</small></button>`).join('')}</div></section></div>`;
-}
-function school() {
-  const library=state.portal.locations.find(l=>l.id==='biblioteca');
-  return `${label('VIDA ESCOLAR')}<h1 class="display">O Castelo de Hogwarts</h1><div class="tiles">${library?imgcard('Biblioteca','Acervo da escola',library.image,'/portal/local/'+library.id,'book'):''}${imgcard('Calendário','Aulas e eventos','/assets/hogwarts_saguão.webp','/portal/calendario','clock')}${imgcard('Taça das Casas','Pontos e resultados','/assets/hogwarts_claustro.webp','/portal/taca','shield')}${imgcard('As Quatro Casas','Tradição e pertencimento','/assets/hogwarts_claustro.webp','/portal/casas','shield')}${imgcard('Quadros de Avisos','Comunicados','/assets/hogwarts_corredor_velas.webp','/portal/avisos','scroll')}</div>`;
-}
-function archives() {
-  return `${label('ARQUIVOS PESSOAIS')}<h1 class="display">Meus Acervos</h1><div class="group">${button('Anuários','/portal/anuarios','book')}${button('Minhas retrospectivas','/portal/retrospectivas','scroll')}${button('Taça das Casas','/portal/taca','shield')}${button('Biblioteca','/portal/conteudos/books','book')}${button('Aulas','/portal/conteudos/lessons','book')}${button('Minha carteira','/portal/carteira','star')}${button('Explorar regiões','/portal/conteudos/regions','map')}${button('Documentos e recompensas','/portal/documentos','scroll')}${button('Galeria de Imagens','/portal/midias','book')}${button('Pessoas conhecidas','/portal/personagens','user')}${button('Artigos revelados','/portal/artigos','book')}</div><div class="tiles">${imgcard('Coleções','Descobertas e registros','/assets/biblioteca_hogwarts.webp','/portal/colecoes','star')}${imgcard('Diário de Missões','Histórias em andamento','/assets/hogwarts_escadarias.webp','/portal/missoes','scroll')}${imgcard('Investigações','Caderno coletivo','/assets/hogwarts_saguão.webp','/portal/investigacoes','book')}${imgcard('Recordações','Memórias e momentos','/assets/correio_pergaminhos.webp','/portal/recordacoes','quill')}</div>`;
-}
+function home() { return playerPages.home(); }
+function school() { return playerPages.school(); }
+function archives() { return playerPages.archives(); }
 function mast(image, kicker, title) {
   return `<section class="media-mast" style="--media:url('${image}')"><div><span class="eyebrow">${esc(kicker)}</span><h1>${esc(title)}</h1></div></section>`;
 }
@@ -227,10 +220,14 @@ function pageContent() {
   if(workshop.handles(state.page))return workshop.page();
   const page=state.page.split('/')[2]??'inicio';
   if(page==='inicio')return home();
+  if(page==='explorar')return playerPages.explore();
+  if(page==='diario')return playerPages.diary();
+  if(page==='sala-comunal')return playerPages.commonRoom();
+  if(page==='salao-principal')return playerPages.hall();
   if(page==='hogwarts')return school();
   if(page==='hogsmeade')return hogsmeade();
   if(page==='acervos')return archives();
-  if(page==='perfil')return profile();
+  if(page==='perfil')return profile()+`<div class="group">${button('Minha carteira','/portal/carteira','star')}${button('Galeria de Imagens','/portal/midias','book')}${button('Artigos revelados','/portal/artigos','book')}</div>`;
   if(page==='mestre')return masterPage();
   if(page==='local')return placePage();
   if(page==='casas')return houses();
@@ -314,9 +311,11 @@ root.addEventListener('submit',async event=>{
   } catch(error){errorEl.textContent=error.message;errorEl.setAttribute('tabindex','-1');errorEl.focus();}
   finally{state.busy=false;submit.disabled=false;submit.removeAttribute('aria-busy');}
 });
-window.addEventListener('popstate',async()=>{
+history.scrollRestoration='manual';
+window.addEventListener('popstate',async event=>{
+  const savedScroll=event.state?.scrollY??0;
   state.view=new URLSearchParams(location.search).get('view_as');state.page=location.pathname;state.dirty=false;
-  try{await refresh(true);}catch(error){toast(error.message,true);}
+  try{await refresh(true);requestAnimationFrame(()=>window.scrollTo({top:savedScroll,behavior:'instant'}));}catch(error){toast(error.message,true);}
 });
 async function boot() {
   try{
@@ -324,7 +323,7 @@ async function boot() {
     state.portal=await api('/api/state');
     if(!state.page.startsWith('/portal/'))state.page=state.session.role==='MASTER'?'/portal/mestre':'/portal/inicio';
     if(state.session.role==='MASTER'&&!state.view)state.admin=await api('/api/master/state',{preview:false});
-    history.replaceState({},'',pathWithView(state.page));
+    history.replaceState({scrollY:window.scrollY},'',pathWithView(state.page));
     try{await loadPage();}catch{state.detail=null;}
     render();
   }catch{state.session=null;render();}

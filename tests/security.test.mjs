@@ -43,7 +43,7 @@ test('PLAYER não eleva papel por query, cabeçalho ou campo de perfil',async()=
 });
 test('região fechada não envia nomes, IDs, marcadores ou metadados das lojas',async()=>{
   const result=await f.atlas.request('/api/state');assert.equal(result.status,200);
-  assert.equal(result.value.regions.find(r=>r.id==='hogsmeade').accessible,false);
+  assert.equal(result.value.regions.some(r=>r.id==='hogsmeade'),false);
   for(const hidden of ['Olivaras','Dedosdemel','Tomos e Pergaminhos','loja_olivaras','"olivaras"'])assert.ok(!JSON.stringify(result.value).includes(hidden));
   assert.equal((await f.atlas.request('/api/locations/olivaras')).status,404);
 });

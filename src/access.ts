@@ -55,7 +55,7 @@ export async function mediaVisible(db: DB, viewer: Viewer, media: Row) {
     return await someAsync((await all(db, 'SELECT * FROM publications WHERE media_id=?', String(media.id))), async (p) => await publicationVisible(db, viewer, p));
 }
 export async function portalState(db: DB, viewer: Viewer) {
-    const regions = await mapAsync((await filterAsync((await all(db, 'SELECT * FROM regions')), async (r) => r.id === 'hogwarts' || r.id === 'hogsmeade' || await regionVisible(db, viewer, r))), async (r) => ({ id: r.id, title: r.title, accessible: await regionVisible(db, viewer, r) }));
+    const regions = await mapAsync((await filterAsync((await all(db, 'SELECT * FROM regions')), async (r) => await regionVisible(db, viewer, r))), async (r) => ({ id: r.id, title: r.title, accessible: await regionVisible(db, viewer, r) }));
     return {
         role: viewer.role, preview: viewer.preview, calendar: await calendarHeader(db),
         character: viewer.characterId ? await characterDTO(db, viewer.characterId) : null,
