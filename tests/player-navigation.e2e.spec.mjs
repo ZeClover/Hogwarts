@@ -23,6 +23,8 @@ test('menu de cinco ações, Diário direto, escola em dois cliques e navegaçã
  await expect(page.locator('.master-bar')).toHaveCount(0);
  expect(await nav.getByRole('link').evaluateAll(links=>links.every(a=>a.getBoundingClientRect().height>=44))).toBe(true);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ const notification=page.getByRole('button',{name:'Revelações',exact:true});
+ await expect(notification).toBeVisible();const noticeBox=await notification.boundingBox(),navBox=await nav.boundingBox();expect(noticeBox.y+noticeBox.height).toBeLessThanOrEqual(navBox.y);expect(noticeBox.height).toBeGreaterThanOrEqual(44);
  await accessible(page);
  await nav.getByRole('link',{name:'Diário',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Diário',exact:true})).toBeVisible();
