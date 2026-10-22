@@ -17,7 +17,7 @@ Autorização vigente: **“Continue ate finalizar todas as etapas”**. Substit
 | F4.0b — sapos/pacotes | Entregue, PR #15 |
 | F4.1 — correio e entrega manual | Entregue, PR #16 |
 | F4.2 — Profeta Diário | Entregue, PR #17 |
-| F5.0 — anuários/retrospectivas | Autorizada |
+| F5.0 — anuários/retrospectivas | Entregue, PR #18 |
 | F5.1 — investigação coletiva/moderação | Autorizada |
 | F5.2 — templates/importação/exportação/qualidade | Autorizada |
 

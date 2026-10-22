@@ -24,6 +24,7 @@ import {handleCalendar} from './school.ts';
 import {handleBoards,locationBoards} from './boards.ts';
 import {handleCup} from './cup.ts';
 import {handleCollections} from './collections.ts';
+import './yearbooks.ts';
 import {handleJournal} from './journal.ts';
 import {handleMail} from './mail.ts';
 import {handleChocolate} from './chocolate.ts';
