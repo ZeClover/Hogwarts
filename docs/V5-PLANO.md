@@ -47,3 +47,7 @@ São cerca de 26 acessos na oficina, e não 26 backends a criar. Os endpoints e 
 Cada PR registra escopo, testes e limitações; testes temporários não semeiam a campanha. B cobre N1–N8 com casos autorizados, recusados e Mestre, mantendo testes de catálogo sem preço e coleções sem contadores ocultos. C cobre criação mínima, reabertura/persistência, campos antigos, privacidade de rascunhos, prévia sem concessão e publicação manual. Demais lotes reutilizam esses testes e verificam as suas regras de negócio (idempotência, conteúdo individual, referências e recuperação).
 
 Receber um pacote visual não autoriza publicar conteúdo privado da pasta do Mestre. O HTML será tratado como referência, nunca como substituto do app. Não há promessa de Sala Precisa personalizável nem criação automática de notícias ou cartas canônicas.
+
+## Evidência da PR B
+
+Build/lint e 172 testes nativos + 172 pelo SDK libSQL passaram. A rodada completa de navegador verificou 32 cenários; 30 passaram na primeira execução. Dois testes de regressão foram ajustados à nova localização de Artigos (menu de usuário) e à espera das animações finitas antes de medir contraste. Os cinco cenários dos arquivos afetados passaram na repetição, incluindo as quatro Casas e o fluxo completo de itens. Nenhuma migration ou gravação na campanha real.

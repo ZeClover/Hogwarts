@@ -1,3 +1,4 @@
+import {settleAnimations} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
@@ -17,6 +18,7 @@ async function assetsHealthy(page){
   await expect.poll(()=>page.evaluate(()=>Array.from(document.images).every(i=>i.complete&&i.naturalWidth>0))).toBe(true);
 }
 async function accessible(page){
+  await settleAnimations(page);
   const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
   expect(result.violations.map(v=>({id:v.id,description:v.description,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);
 }
