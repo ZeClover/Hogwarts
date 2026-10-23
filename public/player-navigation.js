@@ -20,9 +20,26 @@ export function createPlayerPages({state,esc,ico,label,empty,button,pathWithView
   function remember(path){if(!playerSection(path)||path==='/portal/inicio'||/^\/portal\/(catalogo|pedido)\//.test(path))return;try{window.sessionStorage.setItem(recentKey(),path);}catch{/* Navigation also works when browser storage is unavailable. */}}
   function continueLink(){try{const path=window.sessionStorage.getItem(recentKey());if(!path||path.length>=250||!playerSection(path))return '';if(path==='/portal/hogsmeade'&&!regions().some(r=>r.id==='hogsmeade'))return '';if(path.startsWith('/portal/regiao/')&&!regions().some(r=>r.id===path.split('/').pop()))return '';if(path.startsWith('/portal/local/')&&!state.portal.locations.some(l=>l.id===path.split('/').pop()))return '';return link('Continuar de onde parei',path,'Retomar a última página visitada');}catch{return '';}}
   function home(){
-    const p=state.portal.character;
-    const shortcuts=[...(hasSchool()?[['Hogwarts','/portal/hogwarts','Biblioteca, aulas e vida escolar','castle']]:[]),['Diário','/portal/diario','Missões, histórias e investigações','scroll'],['Acervos','/portal/acervos','Seus registros e descobertas','book']];
-    return `${label('SEUS ARQUIVOS MÁGICOS')}<section class="player-welcome"><div><span class="eyebrow">${esc(p?.houseName??'Arquivos Mágicos')}</span><h1 class="display">Hogwarts</h1><p>Bem-vindo${p?', '+esc(p.name):''}.</p></div><img src="${esc(p?.crest??'/assets/hogwarts.webp')}" alt="${esc(p?.houseName??'Brasão de Hogwarts')}"></section>${links(shortcuts)}${continueLink()}<div class="afterhome"><section class="card note-panel"><header><h2 class="head3">Novidades</h2></header>${state.portal.news.length?state.portal.news.slice(0,5).map(n=>link(n.title,n.href??'/portal/publicacao/'+n.id)).join('')+(state.portal.news.length>5?`<details><summary>Outras novidades publicadas</summary>${state.portal.news.slice(5).map(n=>link(n.title,n.href??'/portal/publicacao/'+n.id)).join('')}</details>`:''):'<div class="no-news"><p>Nenhuma novidade por enquanto.</p></div>'}</section><section class="card note-panel"><h2 class="head3">Acesso rápido</h2>${links([['Correio','/portal/correio','Ler e escrever cartas','mail'],...(hasSchool()?[['Aulas e horários','/portal/calendario','Programação publicada','clock']]:[]),...regions().filter(r=>r.id!=='hogwarts').slice(0,2).map(r=>[r.title,regionPath(r),'Explorar região liberada','map'])])}</section></div>`;
+      const p=state.portal.character;
+      const crest=p?.crest??'/assets/hogwarts.webp';
+      const places=[
+        ...(hasSchool()?[['Hogwarts','/portal/hogwarts','Biblioteca, aulas e vida escolar','/assets/hogwarts_saguao.webp']]:[]),
+        ['Explorar','/portal/explorar','Lugares e caminhos que você conhece','/assets/hogwarts_escadarias.webp'],
+        ['Meus Acervos','/portal/acervos','Descobertas, criaturas e recordações','/assets/biblioteca_hogwarts.webp']
+      ];
+      const headline=state.portal.news.slice(0,5);
+      return `${label('SEUS ARQUIVOS MÁGICOS')}
+      <section class="player-hero" aria-label="Castelo de Hogwarts e salão comunal de ${esc(p?.houseName??'Hogwarts')}">
+        <div class="player-hero-inner"><span class="eyebrow">${esc(p?.houseName??'HOGWARTS')} · ${esc(state.portal.calendar.academicYearLabel)}</span>
+          <h1>Hogwarts <span>— seus arquivos</span></h1>
+          <p>Bem-vindo${p?', '+esc(p.name):''}. Descubra histórias, encontre sua turma e explore os lugares revelados.</p>
+        </div><img class="player-hero-crest" src="${esc(crest)}" alt="Brasão de ${esc(p?.houseName??'Hogwarts')}">
+      </section>
+      <div class="creation-section-heading"><h2 class="head2">Escolha seu caminho</h2></div>
+      <nav class="player-door-grid" aria-label="Caminhos da sua jornada">${places.map(([title,path,desc,image])=>`<a class="player-door" href="${esc(pathWithView(path))}" data-go="${esc(path)}"><img src="${esc(image)}" alt="" loading="lazy" decoding="async"><span class="player-door-words"><strong>${esc(title)}</strong><small>${esc(desc)}</small></span></a>`).join('')}</nav>
+      ${continueLink()}
+      <div class="afterhome"><section class="card note-panel"><header><h2 class="head3">Novidades</h2></header>${headline.length?headline.map(n=>link(n.title,n.href??'/portal/publicacao/'+n.id)).join('')+(state.portal.news.length>5?`<details><summary>Mais novidades</summary>${state.portal.news.slice(5).map(n=>link(n.title,n.href??'/portal/publicacao/'+n.id)).join('')}</details>`:''):'<div class="no-news"><p>Nenhuma novidade por enquanto.</p></div>'}</section>
+      <section class="card note-panel"><h2 class="head3">Acesso rápido</h2>${links([['Diário','/portal/diario','Missões, histórias e investigações','scroll'],['Correio','/portal/correio','Ler e escrever cartas','mail'],...(hasSchool()?[['Aulas e horários','/portal/calendario','Programação publicada','clock']]:[])])}</section></div>`;
   }
   function explore(){
     const visible=regions().filter(r=>r.title.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))).sort((a,b)=>Number(b.id==='hogwarts')-Number(a.id==='hogwarts'));
