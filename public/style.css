@@ -167,3 +167,15 @@ html{scroll-padding-top:160px}a,button,input,select,textarea{touch-action:manipu
 .field select,.master-bar select{color-scheme:dark}
 .office-directory{margin:26px 0}.office-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,195px),1fr));gap:10px;margin:18px 0 24px}.office-shortcut{display:flex;align-items:stretch;min-width:0;border:1px solid #b69a6259;border-radius:5px;background:#1b1b22}.office-link{display:flex;flex:1;flex-direction:column;justify-content:center;gap:8px;min-height:88px;min-width:0;padding:16px;color:#efdfc0}.office-link strong{font:19px var(--display);overflow-wrap:anywhere}.office-link small{color:#c7baa5;font-size:11px;line-height:1.5}.office-star{align-self:center;flex-shrink:0;min-width:44px;min-height:44px;border:0;background:none;color:#b5a687}.office-star[aria-pressed=true]{color:#f0d78e}.office-area{border:1px solid #b69a6259;border-radius:5px;padding:0 18px;margin:10px 0;background:#17171f}.office-area>summary{min-height:54px;padding:17px 2px;cursor:pointer;color:#efdfc0;font-size:15px}.office-area .office-links{margin:4px 0 18px}.office-directory.mode-list .office-links{grid-template-columns:1fr}.office-directory.mode-list .office-link{min-height:66px}.office-cohorts{margin-top:28px}.office-cohorts>summary{min-height:50px;cursor:pointer}.office-cohorts .workshop-cohorts{margin:0;border:0;padding:12px 0}.office-shortcut:hover{border-color:var(--house-light)}
 @media(max-width:680px){.office-links{grid-template-columns:1fr}.office-link{min-height:74px;padding:14px}.office-link strong{font-size:19px}.office-area{padding:0 12px}.office-star{min-width:44px}.office-cohorts .dual{grid-template-columns:1fr}}
+/* V5 supplied art: compact contexts; shared frame only for discovered cards. */
+.context-art{display:block;width:100%;height:clamp(110px,20vw,210px);object-fit:cover;border:1px solid var(--line);border-radius:5px;margin:16px 0 24px}
+.frog-face{position:relative;width:min(100%,480px);aspect-ratio:990/905;margin:0 auto;isolation:isolate}
+.frog-portrait{position:absolute;left:31%;top:26%;width:38%;height:56%;overflow:hidden;background:radial-gradient(ellipse at top,#35456e,#101526);clip-path:polygon(50% 0,64% 12%,82% 16%,98% 35%,100% 100%,0 100%,2% 35%,18% 16%,36% 12%)}
+.frog-portrait img{width:100%;height:100%;object-fit:cover}
+.frog-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.frog-name{position:absolute;bottom:8.4%;left:28%;width:44%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#33200d;font-weight:700;font-size:clamp(12px,2vw,20px);text-shadow:0 1px #ffe5a1;line-height:1.4}
+.frog-reverse{background:#e5d3a3;color:#332512;border:4px double #725329;border-radius:12px;padding:16px;margin:16px 0}
+.frog-reverse summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.frog-reverse .biography{color:inherit}
+
+.frog-reverse summary:after{content:'↕';margin-left:auto;padding-left:12px}.frog-reverse summary:focus-visible{outline-color:#573a18}
