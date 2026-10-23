@@ -46,8 +46,8 @@ test('resposta lenta salva o rascunho sem levar o Mestre de volta à página que
  try{
   await page.goto(f.config.origin+'/portal/mestre/oficinas/conteudos/books/novo');await page.getByLabel('Título da obra',{exact:true}).fill('RASCUNHO COM RESPOSTA LENTA');
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await started;
-  await page.getByRole('navigation',{name:'Principal',exact:true}).getByRole('link',{name:'Início',exact:true}).click();release();
-  await expect(page.locator('#toast')).toContainText('Rascunho privado criado.');await expect(page).toHaveURL(f.config.origin+'/portal/inicio');
+  await page.getByRole('navigation',{name:'Principal',exact:true}).getByRole('link',{name:'Central',exact:true}).click();release();
+  await expect(page.locator('#toast')).toContainText('Rascunho privado criado.');await expect(page).toHaveURL(f.config.origin+'/portal/mestre');
   const items=(await f.master.request('/api/master/content/books')).value.items;expect(items.filter(r=>r.payload.title==='RASCUNHO COM RESPOSTA LENTA')).toHaveLength(1);
  }finally{release();await page.unroute('**/api/master/content/books');}
 });
