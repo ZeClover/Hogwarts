@@ -68,3 +68,9 @@ ZIP com 66 arquivos: 43 assets públicos (inclui PNG/WebP da mesma moldura), 9 r
 ## Verificação
 
 Usar fixtures temporárias, testes de autorização negativa, preservação da revisão publicada e prévia sem escrita; capturas reais desktop/390px das quatro Casas e cinco personagens; teclado e axe. Comparar a captura V4 fornecida com base local e resultado. Build confere o manifesto de hashes V4/V5. Não afirmar teste em Turso/Blob reais nem inspeção de Production sem acesso.
+
+## B — Criação e publicação explícitas
+
+NPC mantém o mesmo endpoint, versionamento e políticas. O Mestre escolhe acesso somente seu, personagens ou todos explicitamente; salva o rascunho; Publicar perfil consulta as cinco prévias administrativas para mostrar a lista exata autorizada pelo servidor antes da confirmação. Falha na conferência impede confirmar. Sem publicação automática de alterações ou informações progressivas. Preparar fica em verificação opcional. Ver como jogador fica junto a Salvar/Publicar e abre a escolha direta do estudante/revisão; prévia não escreve.
+
+NPC/item aceitam foto opcional na criação mínima. Metadados internos do item divididos em aparência/composição, uso/magia, fabricação, raridade/circulação; orientação muda pela categoria, sem descartar dados ou criar efeitos/posse. Livros/aulas organizam páginas e ensino separadamente depois do primeiro rascunho. Imagens autorizadas entram nos cards reais; aulas usam a disciplina (incluindo Adivinhação), biblioteca conserva sua imagem.

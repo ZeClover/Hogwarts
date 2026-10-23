@@ -1,4 +1,4 @@
-import {attachImageFallback,enhanceExperience} from '/experience.js';
+import {attachImageFallback,enhanceExperience,organizeItemFields} from '/experience.js';
 import {attachActionCaptions} from '/action-captions.js';
 import {enhanceOfficeHelp} from '/office-help.js';
 import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
@@ -269,6 +269,7 @@ function render() {
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
   root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${journeyTrail()}${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
   enhanceExperience(root,state);
+  organizeItemFields(root);
   enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);
 }
