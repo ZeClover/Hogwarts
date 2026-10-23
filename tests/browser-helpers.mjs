@@ -11,7 +11,7 @@ export async function settleAnimations(page) {
 export async function selectEditorStep(page,name){
   const tab=page.getByRole('tab',{name,exact:true});
   const path=new URL(page.url()).pathname;
-  if(/^\/portal\/mestre\/oficinas\/missoes\/[^/]+$/.test(path)&&!path.endsWith('/novo')){await tab.waitFor({state:'visible'});await tab.click();}
+  if(/^\/portal\/mestre\/oficinas\/missoes\/(?!novo(?:\/|$))[^/]+(?:\/|$)/.test(path)){await tab.waitFor({state:'visible'});await tab.click();}
   else if(await tab.count())await tab.click();
 }
 export async function openPolicy(page){
