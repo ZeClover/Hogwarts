@@ -70,7 +70,7 @@ Livros, aulas, lojas, ofertas, regiões e locais usam o criador mínimo comparti
 
 A flag declarativa `draftOptional` permite adiar somente campos específicos de publicação: vínculos e preço da oferta. Mapas e fotografias são opcionais também na publicação: regiões sem mapa abrem em lista e locais sem foto usam a composição tipográfica, sem URLs de imagem inválidas. Preparar/publicar valida esses campos, inclusive os aninhados, antes de alterar status, snapshot ou estoque na transação. Referências não vazias continuam sendo validadas no rascunho. A validação não reinterpreta modelos visuais já congelados nem modifica dados existentes. Nenhuma migration: só o JSON de novos rascunhos pode conter os valores ainda ausentes.
 
-Testes: rodada completa com 179 casos nativos e 179 pelo SDK libSQL; seis cenários de navegador, repetidos integralmente com o SDK libSQL (6/6), cobrem os seis criadores, campos não associados automaticamente, preço/vínculos pendentes e os fluxos anteriores de livro/mapa/loja/oferta. Regiões sem mapa, locais sem foto e o bookmark antigo de Hogwarts foram verificados. A resposta lenta do criador também é verificada para não tirar o Mestre da página para a qual ele navegou enquanto o salvamento terminava. Sem edição da campanha real ou alteração do Hub RPG. D2–D4 permanecem como próximos lotes; E continua dependendo do pacote visual em partes transferíveis.
+Testes: rodada completa com 179 casos nativos e 179 pelo SDK libSQL; seis cenários de navegador, repetidos integralmente com o SDK libSQL (6/6), cobrem os seis criadores, campos não associados automaticamente, preço/vínculos pendentes e os fluxos anteriores de livro/mapa/loja/oferta. Regiões sem mapa, locais sem foto e o bookmark antigo de Hogwarts foram verificados. A resposta lenta do criador também é verificada para não tirar o Mestre da página para a qual ele navegou enquanto o salvamento terminava. Sem edição da campanha real ou alteração do Hub RPG. Os lotes seguintes estão registrados abaixo; E continua dependendo do pacote visual em partes transferíveis.
 
 ## D2 — publicações e calendário
 
@@ -78,7 +78,9 @@ Oito oficinas adicionais usam criação mínima: Profeta, murais, avisos, anos, 
 
 Edição dos registros salvos começa com conteúdo e vínculos recolhidos. Retrospectiva continua exclusiva ao titular, inclusive nas prévias; criar/editar não notifica. Novidades usa somente snapshots publicados de jornais/eventos/avisos e missões/histórias já autorizadas pelo Diário; aplica acesso ao mural/local e ano corrente dos eventos. Mostra cinco destaques e permite expandir os demais, com links reais. Não envia textos privados, imagens ou datas técnicas no feed.
 
-Validação: build/lint, 183 testes nativos e 183 pelo SDK libSQL passaram. Seis cenários de navegador com SDK passaram, cobrindo os oito criadores e os fluxos completos anteriores de jornal, retrospectiva, mural moderado e calendário/grade. Sem migration ou dados fictícios na campanha; mídia do ZIP continua bloqueada. D3 e D4 são os lotes seguintes.
+Validação: build/lint, 183 testes nativos e 183 pelo SDK libSQL passaram. Seis cenários de navegador com SDK passaram, cobrindo os oito criadores e os fluxos completos anteriores de jornal, retrospectiva, mural moderado e calendário/grade. Sem migration ou dados fictícios na campanha; mídia do ZIP continua bloqueada. D3 e D4 estão registrados abaixo.
+
+Revisão de privacidade D2: Novidades e listagens públicas ordenam pela revisão publicada (ou criação para registros antigos sem histórico), nunca pela data da edição privada. Alterar só um rascunho não sinaliza atividade do Mestre pela ordenação. Nove casos dos arquivos de rascunhos/jornal passaram nos dois backends; quatro casos de publicações foram repetidos com uma regressão determinística que modifica a data técnica do rascunho e verifica a ordem estável.
 
 ## D3 — acervos e pools
 
@@ -86,7 +88,7 @@ Os cinco acervos e os pools de Sapos usam criação mínima por nome. Temporada 
 
 Conteúdo/vínculos, permissões e liberação começam recolhidos. Criar ou publicar não revela coleção, camada, página, cópia física, pacote ou recompensa. Os fluxos anteriores de encontro, observadores, descoberta, notas individuais, sorteio e troca permanecem. A tabela de probabilidades pode ser focada e rolada por teclado no celular. A moldura aprovada depende do ZIP; nenhuma imagem de personagem ou carta foi inventada.
 
-Validação: build/lint, 16 casos de acervos/pools nos dois backends e três cenários de navegador com libSQL, incluindo os seis criadores e os fluxos completos de descoberta/camada/nota e pacote/sorteio. O caso novo foi repetido após corrigir a acessibilidade da tabela (1/1). Sem migration, campanha real ou Production. D4 segue com organização da Oficina, mídia/modelos, correio e pontos.
+Validação: build/lint, 16 casos de acervos/pools nos dois backends e três cenários de navegador com libSQL, incluindo os seis criadores e os fluxos completos de descoberta/camada/nota e pacote/sorteio. O caso novo foi repetido após corrigir a acessibilidade da tabela (1/1). Sem migration, campanha real ou Production. D4 registra a organização da Oficina, mídia/modelos, correio e pontos.
 
 
 ## D4 — oficina organizada e operações
