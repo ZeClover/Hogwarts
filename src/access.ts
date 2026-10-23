@@ -1,4 +1,6 @@
 import { filterAsync, mapAsync, someAsync } from './async-array.ts';
+import { contentAllowed, contentPayload } from './content.ts';
+import { campaignNews } from './campaign.ts';
 import { calendarHeader } from './calendar-model.ts';
 import type { DB, Row } from './db.ts';
 import { all, one } from './db.ts';
@@ -54,13 +56,26 @@ export async function mediaVisible(db: DB, viewer: Viewer, media: Row) {
         return true;
     return await someAsync((await all(db, 'SELECT * FROM publications WHERE media_id=?', String(media.id))), async (p) => await publicationVisible(db, viewer, p));
 }
+async function portalNews(db: DB, viewer: Viewer, currentYear: string) {
+    const news = (await filterAsync(await all(db, "SELECT * FROM publications WHERE status='PUBLISHED' ORDER BY published_at DESC"), r => publicationVisible(db, viewer, r))).map(r => ({ id: String(r.id), title: String(r.title), kind: String(r.kind), href: '/portal/publicacao/' + r.id, order: Number(r.published_at) }));
+    for (const r of await all(db, "SELECT r.*,COALESCE(pub.created_at,r.created_at) AS publication_order FROM content_records r LEFT JOIN content_revisions pub ON pub.record_id=r.id AND pub.version=r.published_revision WHERE kind IN ('newspapers','events','notices') AND status='PUBLISHED' ORDER BY publication_order DESC,r.id")) {
+        if (!await contentAllowed(db, viewer, r)) continue;
+        const p = contentPayload(r);
+        if (r.kind === 'events' && p.academicYear !== currentYear) continue;
+        news.push({ id: String(r.id), title: String(p.title), kind: String(r.kind), href: '/portal/conteudos/' + r.kind + '/' + r.id, order: Number(r.publication_order) });
+    }
+    news.push(...await campaignNews(db, viewer));
+    // Technical timestamps only sort records. They are not narrative dates.
+    return news.sort((a,b) => b.order-a.order || a.id.localeCompare(b.id)).map(({id,title,kind,href}) => ({id,title,kind,href}));
+}
 export async function portalState(db: DB, viewer: Viewer) {
+    const calendar = await calendarHeader(db);
     const regions = await mapAsync((await filterAsync((await all(db, 'SELECT * FROM regions')), async (r) => await regionVisible(db, viewer, r))), async (r) => ({ id: r.id, title: r.title, accessible: await regionVisible(db, viewer, r) }));
     return {
-        role: viewer.role, preview: viewer.preview, calendar: await calendarHeader(db),
+        role: viewer.role, preview: viewer.preview, calendar,
         character: viewer.characterId ? await characterDTO(db, viewer.characterId) : null,
         regions,
         locations: (await filterAsync((await all(db, 'SELECT * FROM locations')), async (r) => await locationVisible(db, viewer, r))).map(locationDTO),
-        news: (await filterAsync((await all(db, "SELECT * FROM publications WHERE status='PUBLISHED' ORDER BY published_at DESC")), async (r) => await publicationVisible(db, viewer, r))).map(r => ({ id: r.id, title: r.title, kind: r.kind })),
+        news: await portalNews(db, viewer, calendar.academicYear),
     };
 }

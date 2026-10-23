@@ -22,7 +22,7 @@ async function result(db: DB, p: ContentPayload) {
 }
 for (const kind of ['yearbooks', 'retrospectives']) {
     registerDocumentKind(kind);
-    registerContent(kind, { label: kind === 'yearbooks' ? 'Anuários públicos' : 'Retrospectivas individuais', singular: kind === 'yearbooks' ? 'Anuário' : 'Retrospectiva individual', global: true, retainArchive: true, fields: [...documentFields.map(f => f.name === 'title' ? { ...f, label: kind === 'yearbooks' ? 'Título do anuário' : 'Título da retrospectiva' } : f), ...(kind === 'yearbooks' ? [{ name: 'resultId', label: 'Resultado oficial da Taça', type: 'reference', source: 'houseResults' }] as Field[] : [{ name: 'characterId', label: 'Dono da retrospectiva', type: 'reference', source: 'characters', required: true }] as Field[])], validate: async (db, p) => {
+    registerContent(kind, { label: kind === 'yearbooks' ? 'Anuários públicos' : 'Retrospectivas individuais', singular: kind === 'yearbooks' ? 'Anuário' : 'Retrospectiva individual', global: true, retainArchive: true, fields: [...documentFields.map(f => f.name === 'title' ? { ...f, label: kind === 'yearbooks' ? 'Título do anuário' : 'Título da retrospectiva' } : f), ...(kind === 'yearbooks' ? [{ name: 'resultId', label: 'Resultado oficial da Taça', type: 'reference', source: 'houseResults' }] as Field[] : [{ name: 'characterId', label: 'Dono da retrospectiva', type: 'reference', source: 'characters', required: true, draftOptional: true }] as Field[])], validate: async (db, p) => {
             validateDocument(db, p);
             if (kind === 'yearbooks')
                 await result(db, p);
