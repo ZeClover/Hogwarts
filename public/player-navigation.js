@@ -23,7 +23,7 @@ export function createPlayerPages({state,esc,ico,label,empty,button,pathWithView
       const p=state.portal.character;
       const crest=p?.crest??'/assets/hogwarts.webp';
       const places=[
-        ...(hasSchool()?[['Hogwarts','/portal/hogwarts','Biblioteca, aulas e vida escolar','/assets/hogwarts_saguao.webp']]:[]),
+        ...(hasSchool()?[['Hogwarts','/portal/hogwarts','Biblioteca, aulas e vida escolar','/assets/hogwarts_claustro.webp']]:[]),
         ['Explorar','/portal/explorar','Lugares e caminhos que você conhece','/assets/hogwarts_escadarias.webp'],
         ['Meus Acervos','/portal/acervos','Descobertas, criaturas e recordações','/assets/biblioteca_hogwarts.webp']
       ];
