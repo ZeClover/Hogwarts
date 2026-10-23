@@ -1,3 +1,4 @@
+import {attachActionCaptions} from '/action-captions.js';
 import {enhanceOfficeHelp} from '/office-help.js';
 import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
 import {attachQuickCreate} from '/quick-create.js';
@@ -22,6 +23,7 @@ import {createCalendarOffice} from '/calendar.js';
 import {createCommerceOffice} from '/commerce.js';
 const root = document.querySelector('#root');
 const state = { session: null, authOrigin: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
+attachActionCaptions(root,state);
 let toastTimer;
 attachQuickCreate(root,{api,state,navigate,render,toast});
 attachEditorTabs(root);

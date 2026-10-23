@@ -133,3 +133,31 @@ Pedido posterior: explicar as opções da Oficina sem aumentar a complexidade. A
 O endereço temporário da Vercel podia mostrar o formulário e recusar o login somente depois de enviar a senha. O app agora consulta apenas a origem pública configurada no servidor: fora dela, mostra um link para o endereço principal antes de pedir credenciais. O destino não é derivado de Host, cabeçalhos encaminhados ou parâmetros da URL. Convites conservam o fragmento ao seguir o link, inclusive ao tentar novamente após falha de rede. A validação estrita de origem e CSRF permanece igual; cookies, senhas, sessões e regras de convite não mudaram.
 
 Validação: build/lint/assets; **192 testes nativos e 192 pelo SDK libSQL** passaram. **Oito cenários únicos de navegador** foram verificados com SDK em lotes, cobrindo endereço temporário/principal, convite, Oficina, upload privado, correspondência, modelos e criadores rápidos. A primeira execução revelou que o nome acessível de Tipo incorporava as opções do seletor; o nome explícito foi corrigido e os dois casos afetados passaram na repetição. Inclui teclado, axe, celular, ausência de rolagem horizontal e preservação de dados digitados. As verificações usam fixtures descartáveis, sem editar a campanha real. Publicação em Production é uma etapa separada.
+
+## H — subtexto visível nas ações e revisão das diferenças entre oficinas
+
+O usuário apontou que a ajuda recolhida não explicava os próprios botões. As ações de autoria e administração agora têm uma frase visível abaixo do botão, associada por `aria-describedby`. A explicação não fica dentro da área clicável: ler a frase não executa a operação. Os nomes, handlers, campos, valores enviados, validações e confirmações permanecem os existentes.
+
+A revisão encontrou diferenças que impedem uma legenda única para tudo:
+
+| Área | Distinção explicada no botão |
+| --- | --- |
+| Preparação e publicação | Preparar confere campos e marca o rascunho; é opcional e não publica. Revisar abre uma confirmação; confirmar executa. |
+| NPCs e itens | Publicar libera perfil/descrição ao público permitido, sem revelar segredos progressivos nem conceder posse. Arquivar oculta, preservando cadastro e histórico. |
+| Imagens | Publicar libera o registro da galeria; arquivar não apaga o arquivo original. |
+| Livros, aulas e coleções | Publicação, descoberta e liberação de páginas/camadas são operações distintas. Arquivar preserva o material já publicado ou descoberto; retirar acesso exige a operação de retirada. |
+| Regiões e locais | Publicar o cadastro não abre uma região. Arquivar região fecha o acesso; arquivar local o desativa. Salvar abertura/público na Central pode afetar acesso imediatamente. |
+| Missões e histórias | Publicar, liberar o Diário, iniciar, revelar pista/capítulo e encerrar são etapas distintas. Arquivar preserva a jornada conhecida. Encerrar não concede prêmios. |
+| Certificados e recompensas | Salvar o plano não concede; emitir PDF ainda o mantém privado; liberar PDF e conceder prêmio têm efeitos próprios. |
+| Correio | Salvar rascunho, enviar à fila e entregar são operações separadas. Arquivar na própria caixa não apaga a cópia de outro destinatário. |
+| Comércio, carteiras e Taça | Revisar não lança valores. Confirmar uma compra debita o preço final e registra estoque/entrega; lançamento de pontos e publicação do resultado também exigem confirmação. |
+| Pacotes de Sapos | Publicar pool não entrega pacotes; conceder pacotes não sorteia as cartas. Troca física preserva o conhecimento no álbum. |
+| Calendário | Salvar preparação não muda a data publicada. Publicar a data narrativa não cria avanço automático de tempo. |
+| Propostas e investigações | Aprovar proposta cria rascunho, sem publicar/revelar. Ocultar contribuição preserva seu registro; moderação do caso tem efeito próprio. |
+| Importação e recuperação | Analisar não aplica; aplicar executa o plano revisado e guarda uma cópia anterior. O backup/arquivo baixado permanece privado. |
+
+As frases cobrem também salvar, duplicar, restaurar, prévias, revisão/cancelamento, convites, grupos/turmas e alterações de acesso. Controles óbvios de navegação, filtros, paginação e formatação não recebem parágrafos repetidos. A ajuda aparece somente para o Mestre fora da prévia de personagem.
+
+Um observador acompanha confirmações inseridas sem reconstruir a página. A anotação é idempotente e preserva o foco do botão quando o editor foca a confirmação. Não adiciona requisições, eventos de clique ou submissões. O teste de publicação do NPC passa a exigir que a confirmação esteja focada antes de pressionar Enter; as descrições são visíveis e os jogadores não recebem essa ajuda administrativa.
+
+Validação: build/lint/assets e **60 casos de API existentes com SDK libSQL** passaram para conferir as diferenças de publicação, arquivo, descoberta, posse e documentos. A regressão completa de **49 cenários de navegador/acessibilidade passou em uma execução única (8,6 min)**, incluindo desktop/celular, nomes e descrições acessíveis, foco da confirmação por teclado, formulários, prévias, permissões, prêmios, backups e navegação. Sem migrations ou alterações da campanha real.
