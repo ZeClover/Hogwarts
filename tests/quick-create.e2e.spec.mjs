@@ -19,7 +19,7 @@ test('missão só com título mantém campos entre abas, política privada e pub
  await page.getByRole('tab',{name:'NPCs/locais',exact:true}).click();await page.getByLabel('Gancho público',{exact:true}).fill('Texto preparado sem publicar.');
  expect((await f.master.request('/api/master/campaign/quests/'+id)).value.payload.title).toBe('MISSÃO RÁPIDA DA FIXTURE');
  await openPolicy(page);await page.getByLabel('Público',{exact:true}).selectOption('ALL');
- await page.getByRole('button',{name:'Salvar rascunho',exact:true}).click();
+ await page.getByRole('button',{name:'Salvar rascunho',exact:true}).click();await expect(page.locator('#toast')).toContainText('Rascunho salvo.');
  const saved=(await f.master.request('/api/master/campaign/quests/'+id)).value;
  expect(saved.status).toBe('DRAFT');expect(saved.payload.title).toBe('MISSÃO EDITADA NA FIXTURE');expect(saved.payload.hook).toBe('Texto preparado sem publicar.');
  expect((await f.atlas.request('/api/campaign/quests')).value.items).toEqual([]);
