@@ -117,6 +117,8 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
             const path = url.pathname, method = req.method ?? 'GET';
             if (url.origin !== config.origin)
                 fail(400, 'Solicitação inválida.');
+            if (path === '/api/auth/context' && method === 'GET')
+                return send(res, 200, { origin: config.origin });
             const session = await sessionFrom(db, req, config);
             const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(method);
             if (mutating)
@@ -424,7 +426,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 mime = 'image/webp';
                 res.setHeader('Cache-Control', 'public, max-age=3600');
             }
-            else if (['/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
+            else if (['/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
                 filename = join(config.publicDir, path.slice(1));
                 mime = extname(path) === '.css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
             }
