@@ -29,7 +29,7 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
   await page.getByRole('button',{name:'Nova imagem',exact:true}).click();await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();
   await page.getByLabel('Nome',{exact:true}).fill('ARTE COMPARTILHADA DE TESTE');
   await page.getByLabel('Descrição visível',{exact:true}).fill('Descrição pública escrita pelo Mestre.');
-  await page.getByLabel('Ou selecionar uma imagem V4',{exact:true}).selectOption('loja_dedosdemel.webp');
+  await page.getByLabel('Ou selecionar uma imagem aprovada',{exact:true}).selectOption('loja_dedosdemel.webp');
   await page.getByLabel('Texto alternativo',{exact:true}).fill('Imagem de ambiente da Dedosdemel');
   await page.getByText('Corte, apresentação e notas',{exact:true}).click();
   await page.getByLabel('Largura (%)',{exact:true}).fill('80');
@@ -38,7 +38,7 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Editar imagem',exact:true})).toBeVisible();
   const path=new URL(page.url()).pathname;
-  await expect(page.getByText('Esta arte V4 já é pública na ambientação do portal. Restringir este registro não torna o arquivo original secreto.')).toBeVisible();
+  await expect(page.getByText('Esta arte de ambientação já é pública na ambientação do portal. Restringir este registro não torna o arquivo original secreto.')).toBeVisible();
   await page.getByLabel('Personagem da prévia',{exact:true}).selectOption('eiris');
   await page.getByRole('button',{name:'Conferir acesso e aparência',exact:true}).click();
   await expect(page.locator('#workshop-preview-result')).toContainText('Esta revisão não está disponível');

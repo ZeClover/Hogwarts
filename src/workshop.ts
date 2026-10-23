@@ -110,7 +110,7 @@ export async function handleWorkshop(req: IncomingMessage, res: ServerResponse, 
                 fields(data, ['asset']);
                 source = text(data.asset, 100);
                 if (!(await approvedAssets(config)).includes(source))
-                    fail(400, 'Selecione uma imagem V4 disponível.');
+                    fail(400, 'Selecione uma imagem aprovada disponível.');
                 buffer = await readFile(join(config.publicDir, 'assets', source));
             }
             else {
