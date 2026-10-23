@@ -1,3 +1,4 @@
+import {attachImageFallback,enhanceExperience} from '/experience.js';
 import {attachActionCaptions} from '/action-captions.js';
 import {enhanceOfficeHelp} from '/office-help.js';
 import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
@@ -24,6 +25,7 @@ import {createCommerceOffice} from '/commerce.js';
 const root = document.querySelector('#root');
 const state = { session: null, authOrigin: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 attachActionCaptions(root,state);
+attachImageFallback(root);
 let toastTimer;
 attachQuickCreate(root,{api,state,navigate,render,toast});
 attachEditorTabs(root);
@@ -48,7 +50,7 @@ const ico = (name, size=20) => `<svg width="${size}" height="${size}" viewBox="0
 const label = (left, right=state.portal?.calendar?.academicYearLabel??'1890–1891') => `<div class="subtop"><span class="eyebrow">${esc(left)}</span><span class="breadcrumbs">${esc(right)}</span></div>`;
 const empty = message => `<div class="vacant slim">${ico('star',30)}<span>${esc(message)}</span></div>`;
 const button = (title, page, icon='arrow', extra='') => `<button class="btn ghost ${extra}" data-go="${page}">${ico(icon,16)} ${esc(title)}</button>`;
-const playerPages=createPlayerPages({state,esc,ico,label,empty,button,pathWithView,render});
+const playerPages=createPlayerPages({state,esc,ico,label,empty,button,pathWithView,render,api});
 playerPages.attach(root);
 const workshop=createWorkshop({api,esc,ico,label,empty,button,state,render,navigate,toast});
 workshop.attach(root);
@@ -109,6 +111,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  await playerPages.load();
   if(state.page==='/portal/regiao/hogwarts'){state.page='/portal/hogwarts';history.replaceState(history.state,'',pathWithView(state.page));}
   if(archivesOffice.handles(state.page)){await archivesOffice.load();return;}
   if(investigationsOffice.handles(state.page)){await investigationsOffice.load();return;}
@@ -164,7 +167,7 @@ function authPage() {
 }
 function header() {
   const p=state.portal.character, isMaster=state.session.role==='MASTER'&&!state.view;
-  const links=primarySections;
+  const links=isMaster?[['Central','mestre'],['Oficina Geral','mestre/oficinas'],['Campanha','mestre/sessao/missoes']]:primarySections;
   return `<header class="top"><a class="brand" href="${pathWithView('/portal/inicio')}" data-go="/portal/inicio"><img src="/assets/hogwarts.webp" alt=""><div class="brand-title">Hogwarts <small>1890 · Arquivos Mágicos</small></div></a><nav class="navigation" aria-label="Principal">${links.map(([name,page])=>`<a href="${pathWithView('/portal/'+page)}" data-go="/portal/${page}" ${playerSection(state.page)===page?'aria-current="page"':''}>${name}</a>`).join('')}</nav><div class="persona">${p?`<a class="persona-link" href="${pathWithView('/portal/perfil')}" data-go="/portal/perfil"><img src="${esc(p.crest)}" alt=""><span>${esc(p.name)}<small>${esc(p.houseName)}</small></span></a>`:`<a class="persona-link" href="/portal/mestre" data-go="/portal/mestre">${ico('shield',27)}<span>Mestre<small>Arquivos Mágicos</small></span></a>`}<button class="icon-button" data-action="logout" aria-label="Sair da conta" title="Sair">${ico('exit',19)}</button></div></header>${state.view?`<aside class="preview-bar"><span>${ico('eye',18)} Visualizando ${esc(p?.name)} · somente leitura</span><button class="btn ghost small" data-action="end-preview">Voltar ao Mestre</button></aside>`:isMaster?`<div class="master-bar"><div class="admin-bar-links"><a href="/portal/mestre" data-go="/portal/mestre">${ico('shield',15)} Central da Sessão</a><a href="/portal/mestre/oficinas" data-go="/portal/mestre/oficinas">${ico('book',15)} Oficina Geral</a></div><label>Visualizar como <select id="preview-select" aria-label="Visualizar como personagem"><option value="">Escolher personagem</option>${(state.admin?.characters??[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>`:''}`;
 }
 function home() { return playerPages.home(); }
@@ -245,13 +248,27 @@ function pageContent() {
   if(page==='publicacao')return state.detail?`${label('NOVIDADES')}<h1 class="display">${esc(state.detail.title)}</h1><article class="card publication">${esc(state.detail.body)}</article>`:empty('Publicação indisponível.');
   return `${label('ARQUIVOS MÁGICOS')}${empty('Esta página não foi encontrada.')}${button('Voltar ao início','/portal/inicio')}`;
 }
+function journeyTrail(){
+  const path=state.page;if(path==='/portal/inicio'||path==='/portal/mestre')return '';
+  const master=state.session.role==='MASTER'&&!state.view;
+  let parent=master?'/portal/mestre/oficinas':'/portal/inicio',name=master?'Oficina Geral':'Início';
+  if(!master){
+    if(path.startsWith('/portal/avisos')||path.includes('/conteudos/boards/')){parent='/portal/hogwarts';name='Hogwarts';}
+    else if(path==='/portal/sala-comunal'||path==='/portal/calendario'||path==='/portal/salao-principal'){parent='/portal/hogwarts';name='Hogwarts';}
+    else if(path.startsWith('/portal/conteudos/')){const parts=path.split('/');parent=parts.length>4?parts.slice(0,4).join('/'):'/portal/explorar';name=parts.length>4?'Voltar à lista':'Explorar';}
+    else if(path.startsWith('/portal/local/')){const region=state.portal.locations.find(l=>l.id===path.split('/').pop())?.regionId;parent=region==='hogwarts'?'/portal/hogwarts':region==='hogsmeade'?'/portal/hogsmeade':'/portal/explorar';name=region==='hogwarts'?'Hogwarts':region==='hogsmeade'?'Hogsmeade':'Explorar';}
+    else if(playerSection(path)){const section=playerSection(path);parent='/portal/'+section;name=primarySections.find(x=>x[1]===section)?.[0]??'Início';if(parent===path){parent='/portal/inicio';name='Início';}}
+  }
+  return `<nav class="journey-trail" aria-label="Caminho da página"><a href="${pathWithView(parent)}" data-go="${parent}">${ico('arrow',16)} Voltar a ${esc(name)}</a><span>${master?'Mestre':path.includes('/avisos')||path.includes('/conteudos/boards')?'Explorar › Hogwarts › Murais':'Arquivos Mágicos'}</span></nav>`;
+}
 function render() {
   delivery.sync();
   if(!state.session){document.documentElement.dataset.house='master';root.innerHTML=authPage();return;}
   if(!state.portal)return;
   document.documentElement.dataset.house=state.portal.character?.house??'master';
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
-  root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
+  root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${journeyTrail()}${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
+  enhanceExperience(root,state);
   enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);
 }
