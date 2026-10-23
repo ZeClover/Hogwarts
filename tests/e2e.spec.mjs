@@ -75,7 +75,7 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
     await page.locator('#preview-select').selectOption(id);
     await expect(page.locator('html')).toHaveAttribute('data-house',house);
     await expect(page.locator('.preview-bar')).toContainText('somente leitura');
-    await expect(page.locator('.player-welcome img')).toHaveAttribute('src','/assets/'+house+'.webp');
+    await expect(page.locator('.hero-house-crest')).toHaveAttribute('src','/assets/'+house+'.webp');
     expect(await page.evaluate(()=>window.__noReload)).toBe(1);
     await assetsHealthy(page);await accessible(page);
     await page.screenshot({path:`docs/screenshots/casa-${house}.png`,fullPage:true});
