@@ -1,3 +1,4 @@
+import {openPolicy} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
@@ -23,9 +24,9 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
   await login(page,'master@test.invalid');await page.getByRole('link',{name:'Oficina Geral',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Oficina Geral do Mestre',exact:true})).toBeVisible();await checks(page);
   await page.screenshot({path:'docs/screenshots/f2-0a/oficina-desktop.png',fullPage:true});
-  await page.getByRole('link',{name:'Biblioteca de Mídia Imagens, capas e apresentações'}).click();
+  await page.locator('.office-area>summary').filter({hasText:/^Sistema$/}).click();await page.getByRole('link',{name:'Biblioteca de Mídia Imagens, capas e apresentações'}).click();
   await expect(page.getByText('Sua biblioteca ainda não tem imagens neste filtro.')).toBeVisible();
-  await page.getByRole('button',{name:'Nova imagem',exact:true}).click();
+  await page.getByRole('button',{name:'Nova imagem',exact:true}).click();await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();
   await page.getByLabel('Nome',{exact:true}).fill('ARTE COMPARTILHADA DE TESTE');
   await page.getByLabel('Descrição visível',{exact:true}).fill('Descrição pública escrita pelo Mestre.');
   await page.getByLabel('Ou selecionar uma imagem V4',{exact:true}).selectOption('loja_dedosdemel.webp');
@@ -33,7 +34,7 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
   await page.getByText('Corte, apresentação e notas',{exact:true}).click();
   await page.getByLabel('Largura (%)',{exact:true}).fill('80');
   await page.getByLabel('Notas privadas do Mestre',{exact:true}).fill('SEGREDO NÃO ENVIAR <img src=x onerror=alert(1)>');
-  await page.locator('[name="characters"][value="atlas"]').check();
+  await openPolicy(page);await page.locator('[name="characters"][value="atlas"]').check();
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Editar imagem',exact:true})).toBeVisible();
   const path=new URL(page.url()).pathname;
@@ -73,13 +74,13 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
 test('upload em celular, turma, exclusões, duplicação e conflito entre editores são operáveis por interface',async({page,context})=>{
   await page.setViewportSize({width:390,height:844});await login(page,'master@test.invalid');
   await page.goto(f.config.origin+base);
-  await page.getByLabel('Nova turma',{exact:true}).fill('Turma criada no navegador');
+  await page.locator('.office-cohorts>summary').click();await page.getByLabel('Nova turma',{exact:true}).fill('Turma criada no navegador');
   const cohortForm=page.locator('[data-workshop-form="cohort"]').last();await cohortForm.getByRole('checkbox',{name:'Atlas Black',exact:true}).check();
   await cohortForm.getByRole('button',{name:'Criar turma',exact:true}).click();await expect(page.locator('#toast')).toContainText('Turma salva.');
-  await page.goto(f.config.origin+base+'/midias/nova');
+  await page.goto(f.config.origin+base+'/midias/nova');await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();
   await page.getByLabel('Nome',{exact:true}).fill('UPLOAD REAL');await page.getByLabel('Texto alternativo',{exact:true}).fill('Brasão de Hogwarts enviado');
   await page.getByLabel('Enviar uma imagem',{exact:true}).setInputFiles('public/assets/hogwarts.webp');
-  await page.getByLabel('Público',{exact:true}).selectOption('ALL');await page.getByText('Restrições e exceções',{exact:true}).click();
+  await openPolicy(page);await page.getByLabel('Público',{exact:true}).selectOption('ALL');await page.getByText('Restrições e exceções',{exact:true}).click();
   await page.getByRole('checkbox',{name:'Turma criada no navegador',exact:true}).check();
   await page.locator('[name="excludedCharacters"][value="eiris"]').check();
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await expect(page.getByRole('heading',{name:'Editar imagem',exact:true})).toBeVisible();
