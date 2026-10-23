@@ -21,7 +21,7 @@ async function points(db: DB, actor: Session, year: string, data: Record<string,
         fail(422, 'Confirme o lançamento.');
     if (typeof data.amount !== 'number' || !Number.isSafeInteger(data.amount) || !data.amount || Math.abs(data.amount) > 1e6)
         fail(400, 'Use pontos inteiros de −1 milhão a +1 milhão, diferentes de zero.');
-    const house = text(data.houseId, 100), reason = text(data.reason, 2000), key = text(data.commandKey, 100);
+    const house = text(data.houseId, 100), reason = text(data.reason ?? '', 2000, false), key = text(data.commandKey, 100);
     if (!/^[\w-]{12,100}$/.test(key))
         fail(400, 'Identificador inválido.');
     await exists(db, 'houses', house);

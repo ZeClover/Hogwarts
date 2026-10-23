@@ -272,7 +272,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',event=>{if(!event.target.closest('[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
+root.addEventListener('input',event=>{if(!event.target.closest('[data-workshop-form="office-search"],[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}

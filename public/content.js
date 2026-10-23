@@ -5,7 +5,7 @@ export function createContentOffice({api,esc,ico,label,empty,button,state,render
  const adminBase='/portal/mestre/oficinas/conteudos',publicBase='/portal/conteudos';let context=null,shared=null,current=null,records=[],history=[],kind='',map=null,catalog=null,error=null,pending=null,preview=null;
  const worldPreferences=new Map();
  const worldPrefs=()=>{const key=(state.view??state.session.characterId??'MASTER')+':'+map.id;if(!worldPreferences.has(key))worldPreferences.set(key,{mode:'map',q:''});return worldPreferences.get(key);};
- const progressiveKinds=new Set(['newspapers','boards','notices','years','events','timetables','yearbooks','retrospectives','chocolatecards','bestiary','rarities','memories','curiosities','chocolatepools']);
+ const progressiveKinds=new Set(['newspapers','boards','notices','years','events','timetables','yearbooks','retrospectives','chocolatecards','bestiary','rarities','memories','curiosities','chocolatepools','templates']);
  const statuses={DRAFT:'Rascunho',PREPARED:'Preparado',PUBLISHED:'Publicado',ARCHIVED:'Arquivado'};let filters={q:'',status:'',year:'',category:''};
  const filtersByScope=new Map();let filterScope='';
  const aliases={'/portal/anuarios':'yearbooks','/portal/retrospectivas':'retrospectives','/portal/profeta':'newspapers'};

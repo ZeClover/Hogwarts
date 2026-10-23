@@ -54,7 +54,7 @@ async function validate(db: DB, actor: Session, value: unknown): Promise<Letter>
     const academicYear = text(d.academicYear, 100);
     if (!await knownAcademicYear(db, academicYear))
         fail(422, 'Ano letivo desconhecido.');
-    return { subject: text(d.subject, 180), body: text(d.body, 16000, false), signature: text(d.signature, 200, false), senderNpcId, senderName, characters, npcs, academicYear, style, templateId: typeof d.templateId === 'string' ? d.templateId : null, template: await templateSnapshot(db, d.templateId, 'LETTER') };
+    return { subject: text(d.subject, 180, false), body: text(d.body, 16000, false), signature: text(d.signature, 200, false), senderNpcId, senderName, characters, npcs, academicYear, style, templateId: typeof d.templateId === 'string' ? d.templateId : null, template: await templateSnapshot(db, d.templateId, 'LETTER') };
 }
 async function history(db: DB, r: Row) { await db.prepare('INSERT INTO letter_revisions(id,letter_id,version,snapshot_json) VALUES(?,?,?,?)').run(randomUUID(), String(r.id), Number(r.version), String(r.draft_json)); }
 registerEvent('LETTER', async (db, v, e) => {
@@ -68,6 +68,7 @@ export async function handleMail(req: IncomingMessage, res: ServerResponse, url:
     if (!admin && !path.startsWith('/api/mail'))
         return false;
     const actor = requireSession(session), v = await viewerFor(db, actor, url), method = req.method ?? 'GET';
+    if (v.preview && method !== 'GET') fail(403, 'A prévia é somente leitura.');
     if (admin) {
         requireMaster(actor);
         if (v.preview)
