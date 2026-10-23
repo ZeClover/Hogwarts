@@ -12,7 +12,7 @@ for(const [id,house,room] of [['atlas','gryffindor','sala_grifinoria'],['darius'
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/restauracao-mobile-'+id+'.png',fullPage:true});
   for(const route of ['sala-comunal','avisos','calendario','acervos','conteudos/books','conteudos/lessons','correio']){
    await page.goto(f.config.origin+'/portal/'+route+'?view_as='+id);await expect(page.locator('html')).toHaveAttribute('data-house',house);await expect(page.getByRole('navigation',{name:'Caminho da página'})).toBeVisible();
-   await settleAnimations(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   await settleAnimations(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
    expect(await page.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.complete&&i.naturalWidth===0).map(i=>i.src))).toEqual([]);
   }
   await page.reload();await expect(page.locator('html')).toHaveAttribute('data-house',house);await settleAnimations(page);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);expect(writes).toEqual([]);
