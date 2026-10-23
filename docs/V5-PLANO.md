@@ -79,3 +79,11 @@ Oito oficinas adicionais usam criação mínima: Profeta, murais, avisos, anos, 
 Edição dos registros salvos começa com conteúdo e vínculos recolhidos. Retrospectiva continua exclusiva ao titular, inclusive nas prévias; criar/editar não notifica. Novidades usa somente snapshots publicados de jornais/eventos/avisos e missões/histórias já autorizadas pelo Diário; aplica acesso ao mural/local e ano corrente dos eventos. Mostra cinco destaques e permite expandir os demais, com links reais. Não envia textos privados, imagens ou datas técnicas no feed.
 
 Validação: build/lint, 183 testes nativos e 183 pelo SDK libSQL passaram. Seis cenários de navegador com SDK passaram, cobrindo os oito criadores e os fluxos completos anteriores de jornal, retrospectiva, mural moderado e calendário/grade. Sem migration ou dados fictícios na campanha; mídia do ZIP continua bloqueada. D3 e D4 são os lotes seguintes.
+
+## D3 — acervos e pools
+
+Os cinco acervos e os pools de Sapos usam criação mínima por nome. Temporada e obra rara podem ficar pendentes no rascunho; preparar/publicar exige preenchimento. Pool vazio guarda pesos nulos e exibe “Não configurada”, sem adotar chances fictícias. Configurar pesos continua exigindo as cartas elegíveis e autorizadas do modelo existente. Obra escolar não é convertida em raridade ao vinculá-la.
+
+Conteúdo/vínculos, permissões e liberação começam recolhidos. Criar ou publicar não revela coleção, camada, página, cópia física, pacote ou recompensa. Os fluxos anteriores de encontro, observadores, descoberta, notas individuais, sorteio e troca permanecem. A tabela de probabilidades pode ser focada e rolada por teclado no celular. A moldura aprovada depende do ZIP; nenhuma imagem de personagem ou carta foi inventada.
+
+Validação: build/lint, 16 casos de acervos/pools nos dois backends e três cenários de navegador com libSQL, incluindo os seis criadores e os fluxos completos de descoberta/camada/nota e pacote/sorteio. O caso novo foi repetido após corrigir a acessibilidade da tabela (1/1). Sem migration, campanha real ou Production. D4 segue com organização da Oficina, mídia/modelos, correio e pontos.

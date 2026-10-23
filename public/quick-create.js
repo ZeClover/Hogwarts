@@ -2,7 +2,7 @@ import {defaultPolicy,policyFields} from './editorial-ui.js';
 
 const itemPrivate=()=>({category:'',quality:'',materials:'',properties:'',magicDegree:'',activation:'',uses:'',frequency:'',craftingComplexity:'',availability:'',rarity:'',requirements:'',secretText:'',notes:'',referenceValueNuques:null,chosenPriceNuques:null,effects:[]});
 const offices={quests:{title:'Nova missão',name:'Título',description:'O que acontece? (opcional)',api:'/api/master/campaign/quests',path:'/portal/mestre/oficinas/missoes'},stories:{title:'Nova história',name:'Título',description:'Resumo (opcional)',api:'/api/master/campaign/stories',path:'/portal/mestre/oficinas/historias'},items:{title:'Novo item',name:'Nome',description:'Descrição (opcional)',api:'/api/master/workshop/items',path:'/portal/mestre/oficinas/itens'},npcs:{title:'Novo NPC',name:'Nome público',description:'Descrição curta (opcional)',api:'/api/master/workshop/npcs',path:'/portal/mestre/oficinas/npcs'}};
-export const contentQuickKinds=new Set(['books','lessons','shops','offers','regions','places','newspapers','boards','notices','years','events','timetables','yearbooks','retrospectives']);
+export const contentQuickKinds=new Set(['books','lessons','shops','offers','regions','places','newspapers','boards','notices','years','events','timetables','yearbooks','retrospectives','chocolatecards','bestiary','rarities','memories','curiosities','chocolatepools']);
 
 export function contentDraftDefaults(kind,fields,currentYear){
   const payload=Object.fromEntries(fields.map(f=>[f.name,f.type==='reference'&&f.source==='years'?currentYear:f.type==='policy'?defaultPolicy('ALL'):f.type==='checkbox'?false:['number','reference','image'].includes(f.type)?null:f.type==='blocks'?[]:f.type==='select'?f.options[0]:'']));
