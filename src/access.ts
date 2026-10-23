@@ -30,7 +30,7 @@ export async function characterDTO(db: DB, id: string) {
         crest: `/assets/${row.crest}`, room: `/assets/${row.room}` };
 }
 export function locationDTO(row: Row) {
-    return { id: row.id, title: row.title, regionId: row.region_id, kind: row.kind, image: row.file_id ? `/api/content/places/${row.id}/image` : `/assets/${row.image}`, x: row.x, y: row.y };
+    return { id: row.id, title: row.title, regionId: row.region_id, kind: row.kind, image: row.file_id ? `/api/content/places/${row.id}/image` : row.image ? `/assets/${row.image}` : null, x: row.x, y: row.y };
 }
 export async function publicationVisible(db: DB, viewer: Viewer, row: Row) {
     if (row.status !== 'PUBLISHED' || !row.published_at)

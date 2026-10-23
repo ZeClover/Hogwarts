@@ -15,6 +15,9 @@ export type Field = {
     label: string;
     type?: 'text' | 'textarea' | 'richtext' | 'id' | 'policy' | 'select' | 'reference' | 'number' | 'checkbox' | 'image' | 'blocks';
     required?: boolean;
+    // Empty drafts may defer these fields. Preparing/publishing revalidates
+    // them in full before any published snapshot or native mirror changes.
+    draftOptional?: boolean;
     max?: number;
     min?: number;
     options?: string[];
@@ -66,11 +69,13 @@ export async function contentProject(db: DB, v: Viewer, row: Row, draft = false)
     return { id: row.id, kind: row.kind, ...dto, template: 'template' in dto ? dto.template : JSON.parse(String((draft ? row.draft_template_json : row.published_template_json) ?? 'null')), image: p[imageField] ? `/api/content/${row.kind}/${row.id}/image?stamp=${imageStamp(row)}` : dto.image ?? null, alt: p.alt ?? dto.alt ?? '' };
 }
 export async function contentAdmin(db: DB, row: Row) { return { id: row.id, kind: row.kind, status: row.status, version: row.version, payload: contentPayload(row, false), policy: contentPolicy(row, false), privateNotes: row.private_notes, publishedRevision: row.published_revision, hasUnpublishedChanges: !!row.published_json && (row.draft_json !== row.published_json || row.draft_policy_json !== row.published_policy_json), extra: await contentSchema(String(row.kind)).admin?.(db, row) ?? {} }; }
-async function validateFields(db: DB, value: unknown, definitions: Field[], depth = 0): Promise<ContentPayload> {
+async function validateFields(db: DB, value: unknown, definitions: Field[], depth = 0, publication = false): Promise<ContentPayload> {
     const p = record(value);
     fields(p, definitions.map(f => f.name));
     return Object.fromEntries(await mapAsync(definitions, async (f) => {
-        const value = p[f.name], type = f.type ?? 'text';
+        const value = p[f.name], type = f.type ?? 'text', required = !!f.required && (!f.draftOptional || publication);
+        if (publication && f.required && f.draftOptional && (value === null || value === undefined || value === ''))
+            fail(422, `Complete ${f.label} antes de preparar ou publicar.`);
         let output: unknown;
         if (type === 'id') {
             output = value === null || value === '' ? randomUUID() : text(value, 100);
@@ -84,7 +89,7 @@ async function validateFields(db: DB, value: unknown, definitions: Field[], dept
             output = value;
         }
         else if (type === 'number') {
-            if (value === null && !f.required)
+            if (value === null && !required)
                 output = null;
             else if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < (f.min ?? 0) || value > (f.max ?? 1e12))
                 fail(400, `Confira ${f.label}.`);
@@ -94,10 +99,10 @@ async function validateFields(db: DB, value: unknown, definitions: Field[], dept
         else if (type === 'blocks') {
             if (depth > 2 || !Array.isArray(value) || value.length > (f.max ?? 50))
                 fail(400, `Confira ${f.label}.`);
-            output = await mapAsync(value, async (block) => await validateFields(db, block, f.fields ?? [], depth + 1));
+            output = await mapAsync(value, async (block) => await validateFields(db, block, f.fields ?? [], depth + 1, publication));
         }
         else if (type === 'image' || type === 'reference') {
-            if ((value === null || value === undefined || value === '') && !f.required)
+            if ((value === null || value === undefined || value === '') && !required)
                 output = null;
             else {
                 const id = text(value, 100);
@@ -111,14 +116,23 @@ async function validateFields(db: DB, value: unknown, definitions: Field[], dept
             }
         }
         else if (type === 'select') {
-            output = text(value, 200, !!f.required);
+            output = text(value, 200, required);
             if (!(f.options ?? []).includes(String(output)))
                 fail(400, `Confira ${f.label}.`);
         }
         else
-            output = text(value, f.max ?? (type === 'textarea' ? 8000 : 180), !!f.required);
+            output = text(value, f.max ?? (type === 'textarea' ? 8000 : 180), required);
         return [f.name, output];
     }));
+}
+async function validateDeferredFields(db: DB, payload: ContentPayload, definitions: Field[]): Promise<void> {
+    const deferred = definitions.filter(f => f.draftOptional);
+    if (deferred.length)
+        await validateFields(db, Object.fromEntries(deferred.map(f => [f.name, payload[f.name]])), deferred, 0, true);
+    for (const f of definitions)
+        if (f.type === 'blocks' && Array.isArray(payload[f.name]))
+            for (const block of payload[f.name] as ContentPayload[])
+                await validateDeferredFields(db, block, f.fields ?? []);
 }
 export async function validateContent(db: DB, kind: string, data: Record<string, unknown>) {
     const schema = contentSchema(kind), p = await validateFields(db, data.payload, schema.fields), policy = await validatePolicy(db, data.policy);
@@ -177,6 +191,7 @@ async function command(db: DB, actor: Session, kind: string, id: string, action:
             fail(409, 'Restaure antes desta ação.');
         if (action === 'publish' || action === 'prepare') {
             const p = contentPayload(before, false);
+            await validateDeferredFields(db, p, schema.fields);
             await schema.validate?.(db, p, contentPolicy(before, false));
             const image = p[schema.imageField ?? 'fileId'];
             if (image && !p.alt)
