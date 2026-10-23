@@ -1,3 +1,4 @@
+import { handleCreations } from './creations.ts';
 import { openCloudDatabase } from './cloud-db.ts';
 import { hostedConfiguration } from './hosted-config.ts';
 import { privateStorage } from './storage.ts';
@@ -174,6 +175,8 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 const actor = requireSession(session);
                 return send(res, 200, { role: actor.role, csrf: actor.csrf, characterId: actor.characterId });
             }
+            if (await handleCreations(req, res, url, db, session))
+                return;
             if (await handleArchives(req, res, url, db, config, session))
                 return;
             if (await handleInvestigations(req, res, url, db, session))
@@ -426,7 +429,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 mime = 'image/webp';
                 res.setHeader('Cache-Control', 'public, max-age=3600');
             }
-            else if (['/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
+            else if (['/creations.js', '/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
                 filename = join(config.publicDir, path.slice(1));
                 mime = extname(path) === '.css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
             }
