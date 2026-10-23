@@ -50,7 +50,7 @@ export function createCreationsOffice({api,esc,ico,label,empty,button,state,rend
       if(!result.items.length||all.length>=total)break;
       page++;
       if(page>100)throw new Error('A lista ultrapassou o limite de páginas');
-    }while(true);
+    }while(page<=100);
     return all;
   }
   async function load(){
