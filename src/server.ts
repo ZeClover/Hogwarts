@@ -37,6 +37,7 @@ import { handleMail } from './mail.ts';
 import { handleChocolate } from './chocolate.ts';
 import { mirrorLocation, regionMap, locationShops } from './world.ts';
 const imageFiles = new Set(['loja_tomos_pergaminhos.webp', 'loja_olivaras.webp', 'loja_dedosdemel.webp', 'loja_pocoes.webp',
+    'loja_gladrags.webp', 'salao_principal.webp', 'lago_negro_casa_dos_barcos.webp', 'floresta_proibida.webp', 'correio_nichos.webp', 'tres_vassouras_balca0.webp', 'aula_classe_ornamentada.webp', 'aula_herbologia_estufa.webp', 'aula_instrumentos.webp', 'aula_sala_astral.webp', 'aula_sala_clara.webp', 'aula_sala_de_pedra.webp', 'aula_sala_gotica.webp',
     'biblioteca_hogwarts.webp', 'hogwarts_corredor_velas.webp', 'hogwarts_escadarias.webp', 'antiquario_ou_oficina.webp']);
 async function known(db: DB, table: 'characters' | 'access_groups' | 'regions' | 'locations', id: string): Promise<Row> {
     // Table names are fixed internal enums, never request text.
@@ -423,7 +424,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 mime = 'image/webp';
                 res.setHeader('Cache-Control', 'public, max-age=3600');
             }
-            else if (['/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
+            else if (['/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
                 filename = join(config.publicDir, path.slice(1));
                 mime = extname(path) === '.css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
             }
