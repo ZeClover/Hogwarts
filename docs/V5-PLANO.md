@@ -60,9 +60,9 @@ Na missão já salva, nove abas separam História, NPCs/locais, Objetivos, Pista
 
 A validação inclui criação mínima/reabertura por API, recusa para PLAYER/prévia, isolamento de defaults, privacidade de rascunhos, texto mantido entre abas e ao abrir a criação avançada, clique duplo sem rascunho duplicado, prévias dos cinco personagens sem auditoria ou concessão e regressão dos campos avançados existentes. Nenhuma migration; dados antigos mantêm estrutura, IDs, autoria e revisões. A rodada final completa passou: 175 casos nativos, 175 pelo SDK libSQL e 35 casos de navegador/acessibilidade (7,5 minutos), além de build/lint. O ajuste móvel de Revelações herdado da PR B foi validado pelos três cenários de navegação, incluindo geometria do botão e lugares revelados de Hogwarts.
 
-## Ainda planejado
+## Estado dos lotes
 
-D1–D4 continuam como lotes posteriores: demais oficinas, validação progressiva de rascunho/publicação e organização das cerca de 26 entradas em sete áreas com favoritos, busca e lista. O criador mínimo desta PR não deve ser apresentado como já aplicado a todas as oficinas. E depende do ZIP em arquivos transferíveis (até 32 MiB cada); nenhum arquivo desse ZIP foi examinado. F inclui a rodada final de serviços reais em preview isolado: testes com SDK de arquivo não comprovam transporte HTTPS, autorização Turso/Blob ou funcionamento de uma nova versão em Production. As PRs V5 não foram mescladas nem promovidas.
+B/C e D1–D4 estão implementados em PRs incrementais. O funcionamento combinado é verificado na rodada final F; as evidências por lote aparecem abaixo. As PRs V5 não foram mescladas nem promovidas. E aguarda o ZIP em partes de até 32 MiB; nenhum arquivo desse ZIP foi examinado. O teste de Turso/Blob reais continua pendente em preview isolado: o SDK de arquivo não comprova transporte HTTPS ou permissões dos serviços.
 
 ## D1 — comércio e ensino
 
@@ -87,3 +87,14 @@ Os cinco acervos e os pools de Sapos usam criação mínima por nome. Temporada 
 Conteúdo/vínculos, permissões e liberação começam recolhidos. Criar ou publicar não revela coleção, camada, página, cópia física, pacote ou recompensa. Os fluxos anteriores de encontro, observadores, descoberta, notas individuais, sorteio e troca permanecem. A tabela de probabilidades pode ser focada e rolada por teclado no celular. A moldura aprovada depende do ZIP; nenhuma imagem de personagem ou carta foi inventada.
 
 Validação: build/lint, 16 casos de acervos/pools nos dois backends e três cenários de navegador com libSQL, incluindo os seis criadores e os fluxos completos de descoberta/camada/nota e pacote/sorteio. O caso novo foi repetido após corrigir a acessibilidade da tabela (1/1). Sem migration, campanha real ou Production. D4 segue com organização da Oficina, mídia/modelos, correio e pontos.
+
+
+## D4 — oficina organizada e operações
+
+A Oficina apresenta cinco favoritos iniciais (Missões, Itens, NPCs, Livros e Notícias), sete áreas recolhidas, busca sem depender de acentos e modos de cartões compactos/lista. Preserva os 26 acessos originais, os links auxiliares e os demais fluxos existentes, totalizando 35 destinos. Favoritos e modo são preferências opcionais deste navegador: armazenam somente IDs de módulos e não substituem a persistência do conteúdo. Turmas continuam disponíveis em um painel recolhido. Nenhuma foto decorativa é repetida no diretório.
+
+Mídia pode começar por um upload e nome opcional derivado do arquivo, com uso privado por padrão. A reutilização seleciona o mesmo arquivo persistido. Todos os bytes continuam no armazenamento privado; escolher “Compartilhável após revisão” configura o público do registro, sem publicar o rascunho ou tornar a URL de armazenamento pública. Alt, corte, autoria, destinatários e revisão permanecem no editor; nome do registro aparece apenas como sugestão no campo de alt, sem virar texto automaticamente. Arte V4 já pública conserva o aviso sobre a origem. A criação avançada preserva texto, arquivo escolhido e intenção de público.
+
+Modelos usam o criador mínimo com composição tipográfica padrão; família/composição e textos continuam editáveis. Cartas podem começar por uma frase sem assunto/destinatário e mantêm o ano atual. Destinatários, assinatura, remetente, apresentação e imagem ficam recolhidos. A ação de envio exige rascunho salvo e destinatários; entregar/moderar continua separado. Escritas pelo endpoint de cartas em prévia agora são recusadas antes de criar qualquer registro. Pontos aceitam motivo opcional; confirmação, auditoria append-only e idempotência permanecem, com apenas totais/ranking no jogador.
+
+Validação do lote: build/lint; 11 casos de API (cartas/pontos/modelos) em cada backend; 13 cenários de navegador com libSQL, incluindo diretório, upload/reutilização, cartas, modelos e regressões completas de autoria, backup, pontos e mídia. Inspeção visual desktop/mobile com fixtures. A rodada integrada F está em execução e será registrada ao terminar. Nenhuma migration, mudança de identidade, edição da campanha real ou publicação em Production.
