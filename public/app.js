@@ -106,6 +106,7 @@ async function navigate(path, replace=false) {
   document.querySelector('#main')?.focus();window.scrollTo({top:0,behavior:'instant'});
 }
 async function loadPage() {
+  if(state.page==='/portal/regiao/hogwarts'){state.page='/portal/hogwarts';history.replaceState(history.state,'',pathWithView(state.page));}
   if(archivesOffice.handles(state.page)){await archivesOffice.load();return;}
   if(investigationsOffice.handles(state.page)){await investigationsOffice.load();return;}
   if(mailOffice.handles(state.page)){await mailOffice.load();return;}
@@ -164,7 +165,7 @@ function home() { return playerPages.home(); }
 function school() { return playerPages.school(); }
 function archives() { return playerPages.archives(); }
 function mast(image, kicker, title) {
-  return `<section class="media-mast" style="--media:url('${image}')"><div><span class="eyebrow">${esc(kicker)}</span><h1>${esc(title)}</h1></div></section>`;
+  return `<section class="media-mast${image?'':' no-image'}" ${image?`style="--media:url('${image}')"`:''}><div><span class="eyebrow">${esc(kicker)}</span><h1>${esc(title)}</h1></div></section>`;
 }
 function hogsmeade() {
   const accessible=state.portal.regions.find(r=>r.id==='hogsmeade')?.accessible;

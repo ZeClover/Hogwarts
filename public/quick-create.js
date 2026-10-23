@@ -2,6 +2,19 @@ import {defaultPolicy,policyFields} from './editorial-ui.js';
 
 const itemPrivate=()=>({category:'',quality:'',materials:'',properties:'',magicDegree:'',activation:'',uses:'',frequency:'',craftingComplexity:'',availability:'',rarity:'',requirements:'',secretText:'',notes:'',referenceValueNuques:null,chosenPriceNuques:null,effects:[]});
 const offices={quests:{title:'Nova missão',name:'Título',description:'O que acontece? (opcional)',api:'/api/master/campaign/quests',path:'/portal/mestre/oficinas/missoes'},stories:{title:'Nova história',name:'Título',description:'Resumo (opcional)',api:'/api/master/campaign/stories',path:'/portal/mestre/oficinas/historias'},items:{title:'Novo item',name:'Nome',description:'Descrição (opcional)',api:'/api/master/workshop/items',path:'/portal/mestre/oficinas/itens'},npcs:{title:'Novo NPC',name:'Nome público',description:'Descrição curta (opcional)',api:'/api/master/workshop/npcs',path:'/portal/mestre/oficinas/npcs'}};
+export const contentQuickKinds=new Set(['books','lessons','shops','offers','regions','places']);
+
+export function contentDraftDefaults(kind,fields,currentYear){
+  const payload=Object.fromEntries(fields.map(f=>[f.name,f.type==='reference'&&f.source==='years'?currentYear:f.type==='policy'?defaultPolicy('ALL'):f.type==='checkbox'?false:['number','reference','image'].includes(f.type)?null:f.type==='blocks'?[]:f.type==='select'?f.options[0]:'']));
+  // A new marker is reserved until the Mestre deliberately opens its access.
+  if(kind==='places')payload.isSecret=true;
+  return payload;
+}
+
+export function quickContentForm(kind,schema,{esc,label,button,path}){
+  const title=schema.fields.find(f=>f.name==='title'),description=schema.fields.find(f=>f.name==='description');
+  return `${label('OFICINA GERAL',schema.label)}<div class="workshop-title"><h1 class="display">Criar ${esc(schema.singular)}</h1>${button('Voltar à lista',path)}</div><section class="card quick-create"><p class="muted">Comece pelo essencial. O rascunho fica privado; complete o conteúdo e revise a publicação depois.</p>${kind==='offers'?'<p class="subtle">Item, loja e preço serão necessários para publicar a oferta. Salvar não cria estoque nem expõe um catálogo.</p>':kind==='places'||kind==='regions'?'<p class="subtle">Criar não abre acesso à região ou ao local.</p>':''}<form data-content-form="quick"><label class="field" for="quick-name">${esc(title.label)}<input id="quick-name" name="name" required maxlength="${title.max??180}" placeholder="${esc(title.label)}"></label>${description?`<label class="field" for="quick-description">${esc(description.label)} (opcional)<textarea id="quick-description" name="description" rows="3" maxlength="${description.max??4000}"></textarea></label>`:''}<p class="form-error" role="alert" tabindex="-1"></p><button class="btn" type="submit">Criar rascunho</button></form><button class="btn ghost small" type="button" data-quick-advanced>Usar criação avançada</button></section>`;
+}
 
 // Defaults describe an empty draft, never an invented price, stock, effect or
 // reward. Existing authenticated APIs validate and persist the resulting body.
@@ -25,14 +38,15 @@ export function compactPolicyFields(context,policy,esc,namespace){
 }
 
 export function attachQuickCreate(root,{api,state,navigate,render,toast}){
-  root.addEventListener('click',e=>{if(!e.target.closest('[data-quick-advanced]')||state.busy)return;const values=new FormData(root.querySelector('[data-quick-create]'));state.fullCreate=true;render();const form=root.querySelector('[data-campaign-form="profile"],[data-item-form="item"],[data-npc-form="profile"]');for(const [from,to] of [['name','name'],['name','title'],['description','description'],['description','summary'],['kind','kind'],['category','category'],['protagonistId','protagonistId']]){const field=form?.querySelector(`[name="${to}"]`);if(field&&values.has(from))field.value=String(values.get(from));}form?.querySelector('input')?.focus();});
+  root.addEventListener('click',e=>{if(!e.target.closest('[data-quick-advanced]')||state.busy)return;const values=new FormData(root.querySelector('[data-quick-create],[data-content-form="quick"]'));state.fullCreate=true;render();const form=root.querySelector('[data-campaign-form="profile"],[data-item-form="item"],[data-npc-form="profile"],[data-content-form="editor"]');for(const [from,to] of [['name','name'],['name','title'],['name','payload.title'],['description','payload.description'],['description','description'],['description','summary'],['kind','kind'],['category','category'],['protagonistId','protagonistId']]){const field=form?.querySelector(`[name="${to}"]`);if(field&&values.has(from))field.value=String(values.get(from));}form?.querySelector('input')?.focus();});
   root.addEventListener('submit',async e=>{
     const form=e.target,kind=form.dataset.quickCreate;if(!kind)return;e.preventDefault();if(state.busy)return;
     const error=form.querySelector('.form-error'),submit=form.querySelector('[type=submit]');
     if(state.session?.role!=='MASTER'||state.view){error.textContent='Acesso reservado ao Mestre.';return;}
     state.busy=true;submit.disabled=true;submit.setAttribute('aria-busy','true');error.textContent='';
+    const sourcePage=state.page;
     try{const request=quickCreateRequest(kind,new FormData(form),{currentAcademicYear:state.portal.calendar.academicYear});
-      const saved=await api(request.api,{method:'POST',body:request.body});state.dirty=false;await navigate(request.path+'/'+saved.id,true);toast('Rascunho privado criado. Você pode completar os detalhes quando quiser.');
+      const saved=await api(request.api,{method:'POST',body:request.body});if(state.page===sourcePage){state.dirty=false;await navigate(request.path+'/'+saved.id,true);}toast('Rascunho privado criado. Você pode completar os detalhes quando quiser.');
     }catch(err){error.textContent=err.message;error.focus();}finally{state.busy=false;submit.disabled=false;submit.removeAttribute('aria-busy');}
   });
 }
