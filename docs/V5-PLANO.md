@@ -51,3 +51,15 @@ Receber um pacote visual não autoriza publicar conteúdo privado da pasta do Me
 ## Evidência da PR B
 
 Build/lint e 172 testes nativos + 172 pelo SDK libSQL passaram. A rodada completa de navegador verificou 32 cenários; 30 passaram na primeira execução. Dois testes de regressão foram ajustados à nova localização de Artigos (menu de usuário) e à espera das animações finitas antes de medir contraste. Os cinco cenários dos arquivos afetados passaram na repetição, incluindo as quatro Casas e o fluxo completo de itens. Nenhuma migration ou gravação na campanha real.
+
+## PR C — criação mínima e edição progressiva
+
+`public/quick-create.js` compartilha formulário e factories para missão, história individual, item e NPC, reutilizando os endpoints autenticados existentes. Missão pede título; história também pede protagonista; item/NPC pedem nome. Resumos, categoria e descrição são opcionais. Ano corrente vem do estado publicado da campanha. Sem foto, preço, estoque, efeitos ou concessões inventados. A opção de criação avançada preserva o texto digitado e todos os campos anteriores.
+
+Na missão já salva, nove abas separam História, NPCs/locais, Objetivos, Pistas, Participantes, Desfechos, Recompensas, Certificados e Publicação. A mudança de aba conserva os mesmos controles no formulário e não salva nem publica. Permissões detalhadas ficam recolhidas em “Para quem?”. As ações de recompensa e PDF continuam nos editores persistidos existentes; não foram reimplementadas. O retorno de operações feitas na Central da Sessão conserva a rota dessa central. Informações progressivas do NPC começam recolhidas.
+
+A validação inclui criação mínima/reabertura por API, recusa para PLAYER/prévia, isolamento de defaults, privacidade de rascunhos, texto mantido entre abas e ao abrir a criação avançada, clique duplo sem rascunho duplicado, prévias dos cinco personagens sem auditoria ou concessão e regressão dos campos avançados existentes. Nenhuma migration; dados antigos mantêm estrutura, IDs, autoria e revisões. A rodada final completa passou: 175 casos nativos, 175 pelo SDK libSQL e 35 casos de navegador/acessibilidade (7,5 minutos), além de build/lint. O ajuste móvel de Revelações herdado da PR B foi validado pelos três cenários de navegação, incluindo geometria do botão e lugares revelados de Hogwarts.
+
+## Ainda planejado
+
+D1–D4 continuam como lotes posteriores: demais oficinas, validação progressiva de rascunho/publicação e organização das cerca de 26 entradas em sete áreas com favoritos, busca e lista. O criador mínimo desta PR não deve ser apresentado como já aplicado a todas as oficinas. E depende do ZIP em arquivos transferíveis (até 32 MiB cada); nenhum arquivo desse ZIP foi examinado. F inclui a rodada final de serviços reais em preview isolado: testes com SDK de arquivo não comprovam transporte HTTPS, autorização Turso/Blob ou funcionamento de uma nova versão em Production. As PRs V5 não foram mescladas nem promovidas.

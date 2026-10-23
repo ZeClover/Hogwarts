@@ -20,7 +20,7 @@ async function assetsHealthy(page){
 async function accessible(page){
   await settleAnimations(page);
   const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
-  expect(result.violations.map(v=>({id:v.id,description:v.description,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);
+  expect(result.violations.map(v=>({id:v.id,description:v.description,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
 }
 
 test('login, teclado, perfil e região fechada em desktop e celular',async({page})=>{
