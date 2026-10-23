@@ -54,6 +54,7 @@ test('novidades usa snapshots publicados e autorização real, sem missões não
  const f=await fixture();try{
   const paper=await publish(f,'newspapers',await create(f,'newspapers','JORNAL PUBLICADO',{number:'Edição escrita',headline:'MANCHETE PUBLICADA'}));
   const event=await publish(f,'events',await create(f,'events','EVENTO PUBLICADO'));
+  await publish(f,'events',await create(f,'events','OUTRO EVENTO PUBLICADO'));
   await publish(f,'events',await create(f,'events','MODELO OCULTO',{isTemplate:true}));
   const board=await publish(f,'boards',await create(f,'boards','MURAL',{locationId:'biblioteca'}));
   const notice=await publish(f,'notices',await create(f,'notices','AVISO VISÍVEL',{boardId:board.id}));
@@ -64,8 +65,15 @@ test('novidades usa snapshots publicados e autorização real, sem missões não
   let news=(await f.atlas.request('/api/state')).value.news;for(const r of [paper,event,notice,q])assert.ok(news.some(n=>n.id===r.id));assert.ok(!JSON.stringify(news).includes('MODELO OCULTO'));
   assert.ok(!(await f.eiris.request('/api/state')).value.news.some(n=>n.id===q.id));
   assert.deepEqual(Object.keys(news[0]).sort(),['href','id','kind','title']);
+  f.db.prepare('UPDATE content_records SET updated_at=1 WHERE id=?').run(paper.id);f.db.prepare('UPDATE content_revisions SET created_at=1 WHERE record_id=? AND version=?').run(paper.id,paper.publishedRevision);
+  const orderBefore=(await f.atlas.request('/api/state')).value.news.map(n=>n.id);
   await f.master.request(root('newspapers')+'/'+paper.id,{method:'PATCH',body:{version:paper.version,...await body(f,'newspapers','TÍTULO AINDA PRIVADO',{number:'2',headline:'NOVA MANCHETE'})}});
-  assert.ok(!(await f.atlas.request('/api/state')).value.news.some(n=>n.title==='TÍTULO AINDA PRIVADO'));
+  f.db.prepare('UPDATE content_records SET updated_at=2147483647 WHERE id=?').run(paper.id);
+  const afterPrivateEdit=(await f.atlas.request('/api/state')).value.news;assert.ok(!afterPrivateEdit.some(n=>n.title==='TÍTULO AINDA PRIVADO'));assert.deepEqual(afterPrivateEdit.map(n=>n.id),orderBefore);
+  f.db.prepare('UPDATE content_records SET updated_at=1 WHERE id=?').run(event.id);f.db.prepare('UPDATE content_revisions SET created_at=1 WHERE record_id=? AND version=?').run(event.id,event.publishedRevision);
+  const publicList=(await f.atlas.request('/api/content/events')).value.items.map(n=>n.id);assert.equal(publicList.at(-1),event.id);
+  f.db.prepare('UPDATE content_records SET updated_at=2147483647 WHERE id=?').run(event.id);
+  assert.deepEqual((await f.atlas.request('/api/content/events')).value.items.map(n=>n.id),publicList);
   await f.master.request(root('boards')+'/'+board.id+'/archive',{method:'POST',body:{version:board.version}});
   news=(await f.atlas.request('/api/state')).value.news;assert.ok(!news.some(n=>n.id===notice.id));
   assert.equal((await f.atlas.request('/api/content/notices/'+notice.id)).status,404);
