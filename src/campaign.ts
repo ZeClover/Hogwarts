@@ -136,6 +136,15 @@ async function canRead(db: DB, viewer: Viewer, domain: Domain, row: Row) {
         return false;
     return domain === 'stories' ? !!row.access_active : !!await one(db, 'SELECT 1 FROM quest_participants WHERE quest_id=? AND character_id=? AND active=1', String(row.id), viewer.characterId!);
 }
+// Home highlights use the same diary authorization as the actual record.
+export async function campaignNews(db: DB, viewer: Viewer) {
+    const result: { id: string; title: string; kind: string; href: string; order: number }[] = [];
+    for (const domain of ['quests', 'stories'] as const)
+        for (const row of await all(db, `SELECT * FROM ${table(domain)} WHERE status='PUBLISHED' ORDER BY published_at DESC,id`))
+            if (await canRead(db, viewer, domain, row))
+                result.push({ id: String(row.id), title: payload(row, true).title, kind: domain, href: '/portal/missoes/' + (domain === 'quests' ? 'grupo/' : 'historias/') + row.id, order: Number(row.published_at) });
+    return result;
+}
 async function links(db: DB, viewer: Viewer, p: {
     npcId: string | null;
     locationId: string | null;
