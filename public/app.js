@@ -1,3 +1,4 @@
+import {enhanceOfficeHelp} from '/office-help.js';
 import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
 import {attachQuickCreate} from '/quick-create.js';
 import {primarySections,playerSection,createPlayerPages} from '/player-navigation.js';
@@ -20,7 +21,7 @@ import {createBoardOffice} from '/boards.js';
 import {createCalendarOffice} from '/calendar.js';
 import {createCommerceOffice} from '/commerce.js';
 const root = document.querySelector('#root');
-const state = { session: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
+const state = { session: null, authOrigin: null, portal: null, admin: null, view: new URLSearchParams(location.search).get('view_as'), page: location.pathname, detail: null, dirty: false, busy: false };
 let toastTimer;
 attachQuickCreate(root,{api,state,navigate,render,toast});
 attachEditorTabs(root);
@@ -154,7 +155,10 @@ async function refresh(force=false) {
 }
 function authPage() {
   const activate=location.pathname==='/ativar';
-  return `<main id="main" class="auth-shell" tabindex="-1"><section class="auth-art" aria-label="Castelo de Hogwarts à noite"><div class="auth-wordmark"><img src="/assets/hogwarts.webp" alt="Brasão de Hogwarts"><span>Hogwarts <small>ARQUIVOS MÁGICOS</small></span></div><div class="auth-story"><span class="eyebrow">ESCOLA DE MAGIA E BRUXARIA</span><h1>Há histórias que<br>pertencem a poucos.</h1><div class="gold-rule"></div><p>As suas esperam por você.</p><span class="auth-year">ANO LETIVO 1890–1891</span></div></section><section class="auth-form-panel"><div class="auth-form-inner"><span class="eyebrow">${activate?'UMA NOVA HISTÓRIA':'BEM-VINDO DE VOLTA'}</span><h2>${activate?'Seu lugar em Hogwarts':'Os arquivos aguardam'}</h2><p class="muted">${activate?'Use o e-mail do seu convite para criar sua conta.':'Entre para continuar a sua história.'}</p><form data-form="${activate?'activate':'login'}"><label class="field">E-mail<input type="email" name="email" autocomplete="username" required maxlength="254" placeholder="Seu e-mail"></label><label class="field">${activate?'Crie uma senha':'Senha'}<input type="password" name="password" autocomplete="${activate?'new-password':'current-password'}" minlength="12" maxlength="128" required placeholder="${activate?'Pelo menos 12 caracteres':'Sua senha'}"></label>${activate?'<p class="subtle">Seu convite é pessoal e pode ser utilizado uma única vez.</p>':''}<p class="form-error" role="alert"></p><button class="btn auth-submit" type="submit">${activate?'Aceitar convite':'Entrar nos arquivos'} ${ico('arrow',18)}</button></form><div class="auth-note">${ico('lock',16)} Acesso privado por convite do Mestre.</div>${activate?'<a class="auth-link" href="/entrar">Já tem uma conta? Entrar</a>':''}<p class="auth-help">${activate?'O convite expirou? Peça um novo ao Mestre.':'Para acessar pela primeira vez ou recuperar seu acesso, fale com o Mestre.'}</p></div><span class="auth-bottom">HOGWARTS · 1890</span></section></main>`;
+  const canonical=new URL(activate?'/ativar':'/entrar',state.authOrigin??location.origin);
+  if(activate)canonical.hash=location.hash;
+  const accessNotice=!state.authOrigin?`<p role="status">Não foi possível conferir o endereço de acesso. Recarregue a página para tentar novamente.</p><a class="btn" href="${esc(activate?'/ativar'+location.hash:'/entrar')}">Tentar novamente</a>`:state.authOrigin!==location.origin?`<div class="auth-origin-note" role="status"><p>Este é um endereço temporário. Use o endereço principal para entrar na sua conta.</p><a class="btn" href="${esc(canonical.href)}" rel="noreferrer">Continuar no endereço principal</a></div>`:'';
+  return `<main id="main" class="auth-shell" tabindex="-1"><section class="auth-art" aria-label="Castelo de Hogwarts à noite"><div class="auth-wordmark"><img src="/assets/hogwarts.webp" alt="Brasão de Hogwarts"><span>Hogwarts <small>ARQUIVOS MÁGICOS</small></span></div><div class="auth-story"><span class="eyebrow">ESCOLA DE MAGIA E BRUXARIA</span><h1>Há histórias que<br>pertencem a poucos.</h1><div class="gold-rule"></div><p>As suas esperam por você.</p><span class="auth-year">ANO LETIVO 1890–1891</span></div></section><section class="auth-form-panel"><div class="auth-form-inner"><span class="eyebrow">${activate?'UMA NOVA HISTÓRIA':'BEM-VINDO DE VOLTA'}</span><h2>${activate?'Seu lugar em Hogwarts':'Os arquivos aguardam'}</h2><p class="muted">${activate?'Use o e-mail do seu convite para criar sua conta.':'Entre para continuar a sua história.'}</p>${accessNotice||`<form data-form="${activate?'activate':'login'}"><label class="field">E-mail<input type="email" name="email" autocomplete="username" required maxlength="254" placeholder="Seu e-mail"></label><label class="field">${activate?'Crie uma senha':'Senha'}<input type="password" name="password" autocomplete="${activate?'new-password':'current-password'}" minlength="12" maxlength="128" required placeholder="${activate?'Pelo menos 12 caracteres':'Sua senha'}"></label>${activate?'<p class="subtle">Seu convite é pessoal e pode ser utilizado uma única vez.</p>':''}<p class="form-error" role="alert"></p><button class="btn auth-submit" type="submit">${activate?'Aceitar convite':'Entrar nos arquivos'} ${ico('arrow',18)}</button></form>`}<div class="auth-note">${ico('lock',16)} Acesso privado por convite do Mestre.</div>${activate?'<a class="auth-link" href="/entrar">Já tem uma conta? Entrar</a>':''}<p class="auth-help">${activate?'O convite expirou? Peça um novo ao Mestre.':'Para acessar pela primeira vez ou recuperar seu acesso, fale com o Mestre.'}</p></div><span class="auth-bottom">HOGWARTS · 1890</span></section></main>`;
 }
 function header() {
   const p=state.portal.character, isMaster=state.session.role==='MASTER'&&!state.view;
@@ -246,6 +250,7 @@ function render() {
   document.documentElement.dataset.house=state.portal.character?.house??'master';
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
   root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
+  enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);
 }
 async function preview(id) {
@@ -324,6 +329,7 @@ window.addEventListener('popstate',async event=>{
   try{await refresh(true);requestAnimationFrame(()=>window.scrollTo({top:savedScroll,behavior:'instant'}));}catch(error){toast(error.message,true);}
 });
 async function boot() {
+  try{const {origin}=await api('/api/auth/context',{preview:false});const parsed=new URL(origin);if(['http:','https:'].includes(parsed.protocol)&&parsed.origin===origin)state.authOrigin=origin;}catch{/* Do not ask for a password until the destination can be checked. */}
   try{
     state.session=await api('/api/session',{preview:false});
     state.portal=await api('/api/state');

@@ -11,7 +11,7 @@ async function accessible(page){await settleAnimations(page);const result=await 
 test('missão só com título mantém campos entre abas, política privada e publicação separada',async({page})=>{
  await login(page);await page.goto(f.config.origin+'/portal/mestre/oficinas/missoes/novo');
  await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.locator('[type=file]')).toHaveCount(0);
- await page.getByLabel('Título',{exact:true}).fill('MISSÃO RÁPIDA DA FIXTURE');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
+ await page.getByLabel('Título',{exact:true}).fill('MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await help.locator('summary').click();await expect(page.getByLabel('Título',{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await page.getByLabel('Tipo',{exact:true}).selectOption('Missão de grupo');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await help.locator('summary').click();await expect(page.getByLabel('Tipo',{exact:true})).toHaveValue('Missão de grupo');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();
  const id=new URL(page.url()).pathname.split('/').pop();
  await expect(page.getByRole('tab')).toHaveCount(9);
