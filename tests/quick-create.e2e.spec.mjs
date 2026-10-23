@@ -39,7 +39,7 @@ test('item e NPC nascem sem imagem nem preço, e clique repetido não duplica ra
  await page.setViewportSize({width:390,height:844});await login(page);
  for(const [path,label,name,api] of [['itens','Nome','ITEM MÍNIMO DA FIXTURE','items'],['npcs','Nome público','NPC MÍNIMO DA FIXTURE','npcs']]){
   await page.goto(f.config.origin+'/portal/mestre/oficinas/'+path+'/novo');
-  await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.locator('[type=file]')).toHaveCount(0);await accessible(page);
+  await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.getByLabel('Foto (opcional)',{exact:true})).not.toHaveAttribute('required','');await accessible(page);
   await page.getByLabel(label,{exact:true}).fill(name);
   await page.evaluate(()=>{const f=document.querySelector('[data-quick-create]');f.requestSubmit();f.requestSubmit();});
   await expect(page.getByRole('heading',{name:path==='itens'?'Editar item':'Editar NPC',exact:true})).toBeVisible();
