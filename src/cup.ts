@@ -1,3 +1,4 @@
+import {latestCycle,cycleState,newCycle,cycleCommand} from './cup-cycles.ts';
 import { filterAsync, mapAsync } from './async-array.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -9,12 +10,13 @@ import { academicYears, knownAcademicYear, calendarHeader } from './calendar-mod
 const competition = async (db: DB, year: string) => await one(db, 'SELECT * FROM house_competitions WHERE academic_year=?', year) ?? fail(404, 'Inicie a competição deste ano.');
 async function totals(db: DB, year: string) { const houses = (await mapAsync((await all(db, 'SELECT * FROM houses')), async (h) => ({ id: h.id, name: h.name, crest: '/assets/' + h.crest, points: Number((await one(db, 'SELECT COALESCE(SUM(amount),0) n FROM house_point_entries WHERE academic_year=? AND house_id=?', year, String(h.id)))!.n) }))).sort((a, b) => b.points - a.points || String(a.name).localeCompare(String(b.name), 'pt-BR')); return houses.map(h => ({ ...h, rank: houses.filter(other => other.points > h.points).length + 1 })); }
 export async function cupPublic(db: DB, year: string) {
+    if(year.startsWith('cycle-'))return cycleState(db,year);
     if (!await knownAcademicYear(db, year))
         fail(404, 'Ano não encontrado.');
     const c = await one(db, 'SELECT status FROM house_competitions WHERE academic_year=?', year), results = await all(db, 'SELECT academic_year,version,snapshot_json FROM house_results ORDER BY created_at DESC,rowid DESC');
-    return { academicYear: year, years: await filterAsync(await academicYears(db), async (y) => y.id === (await calendarHeader(db)).academicYear || !!await one(db, 'SELECT academic_year FROM house_competitions WHERE academic_year=?', y.id)), competition: c ? { status: c.status, houses: await totals(db, year), result: results.find(r => r.academic_year === year) ? JSON.parse(String(results.find(r => r.academic_year === year)!.snapshot_json)) : null } : null, history: results.map(r => JSON.parse(String(r.snapshot_json))) };
+    return { academicYear: year, years: await filterAsync([...await academicYears(db),...(await all(db,'SELECT id,label FROM cup_cycles')).map(c=>({id:String(c.id),name:String(c.label)}))], async (y) => y.id.startsWith('cycle-') || y.id === (await calendarHeader(db)).academicYear || !!await one(db, 'SELECT academic_year FROM house_competitions WHERE academic_year=?', y.id)), competition: c ? { status: c.status, houses: await totals(db, year), result: results.find(r => r.academic_year === year) ? JSON.parse(String(results.find(r => r.academic_year === year)!.snapshot_json)) : null } : null, history: results.map(r => JSON.parse(String(r.snapshot_json))) };
 }
-async function administrative(db: DB, year: string) { return { ...await cupPublic(db, year), version: (await one(db, 'SELECT version FROM house_competitions WHERE academic_year=?', year))?.version ?? null, years: await academicYears(db), characters: await all(db, 'SELECT id,name FROM characters'), events: (await all(db, "SELECT id,draft_json FROM content_records WHERE kind='events'")).map(r => ({ id: r.id, name: JSON.parse(String(r.draft_json)).title })), entries: await all(db, 'SELECT * FROM house_point_entries WHERE academic_year=? ORDER BY rowid DESC', year) }; }
+async function administrative(db: DB, year: string) { if(year.startsWith('cycle-'))return cycleState(db,year,true);return { ...await cupPublic(db, year), version: (await one(db, 'SELECT version FROM house_competitions WHERE academic_year=?', year))?.version ?? null, years: [...await academicYears(db),...(await all(db,'SELECT id,label FROM cup_cycles')).map(c=>({id:c.id,name:c.label}))], characters: await all(db, 'SELECT id,name FROM characters'), events: (await all(db, "SELECT id,draft_json FROM content_records WHERE kind='events'")).map(r => ({ id: r.id, name: JSON.parse(String(r.draft_json)).title })), entries: await all(db, 'SELECT * FROM house_point_entries WHERE academic_year=? ORDER BY rowid DESC', year) }; }
 async function points(db: DB, actor: Session, year: string, data: Record<string, unknown>) {
     fields(data, ['academicYear', 'version', 'houseId', 'amount', 'reason', 'characterId', 'eventId', 'commandKey', 'confirm']);
     if (data.confirm !== true)
@@ -58,18 +60,20 @@ export async function handleCup(req: IncomingMessage, res: ServerResponse, url: 
         return false;
     const actor = requireSession(session);
     if (!admin && method === 'GET') {
-        send(res, 200, await cupPublic(db, url.searchParams.get('year') ?? (await calendarHeader(db)).academicYear));
+        send(res, 200, await cupPublic(db, url.searchParams.get('year') ?? await latestCycle(db) ?? (await calendarHeader(db)).academicYear));
         return true;
     }
     requireMaster(actor);
     if (url.searchParams.has('view_as'))
         fail(403, 'A prévia é somente leitura.');
     if (path === '/api/master/cup' && method === 'GET') {
-        send(res, 200, await administrative(db, url.searchParams.get('year') ?? (await calendarHeader(db)).academicYear));
+        send(res, 200, await administrative(db, url.searchParams.get('year') ?? await latestCycle(db) ?? (await calendarHeader(db)).academicYear));
         return true;
     }
+    if(path==='/api/master/cup/cycles'&&method==='POST'){send(res,201,await newCycle(db,actor,await jsonBody(req)));return true;}
     if (method === 'POST') {
         const data = await jsonBody(req), year = text(data.academicYear, 100);
+        if(year.startsWith('cycle-')){send(res,200,await cycleCommand(db,actor,year,path.split('/').pop()!,data));return true;}
         if (!await knownAcademicYear(db, year))
             fail(400, 'Ano indisponível.');
         if (path === '/api/master/cup/points') {

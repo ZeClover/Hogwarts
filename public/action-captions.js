@@ -32,7 +32,7 @@ const formActions={
  documentForm:{certificate:'Salva o texto do certificado; ainda não emite nem libera o PDF.',reward:'Guarda o plano, sem entregar itens, moedas ou descobertas.',share:'Autoriza os personagens marcados a consultar e baixar este certificado.'},
  mailForm:{compose:'Guarda a carta como rascunho do autor. Enviar e entregar são ações separadas.',image:'Guarda uma imagem privada na carta; não envia a correspondência.',moderate:'Revisa a decisão escolhida. Entregar libera a carta aos destinatários; reter mantém na fila.'},
  archiveForm:{prepare:'Analisa o arquivo e mostra o que aconteceria, sem aplicar alterações à campanha.',apply:'Executa o plano revisado e guarda antes uma cópia de segurança. Confira se escolheu importar ou restaurar.'},
- cupForm:{points:'Revisa a soma ou a retirada de pontos da Casa. O total muda somente ao confirmar.',close:'Revisa o encerramento e a publicação da Casa escolhida como vencedora.',reopen:'Revisa a reabertura para correção, preservando resultados e lançamentos anteriores.'},
+ cupForm:{points:'Registra os pontos na Casa escolhida. Valores negativos corrigem o placar.',close:'Revisa o encerramento e a publicação da Casa escolhida como vencedora.',reopen:'Revisa a reabertura para correção, preservando resultados e lançamentos anteriores.'},
  chocolateForm:{grant:'Revisa a concessão dos pacotes aos personagens marcados. O sorteio acontece ao abrir.',trade:'Revisa a troca de duas cópias físicas; o conhecimento no álbum é preservado.',cancel:'Revisa a retirada de um pacote ainda lacrado, sem apagar cartas já descobertas.'},
  commerceForm:{adjust:'Revisa um crédito ou débito manual na carteira; só será lançado após confirmar.',approve:'Revisa o preço final da compra. Confirmar debita a carteira, consome o estoque e registra a entrega.',reject:'Revisa a recusa do pedido, sem cobrar ou entregar o item.'},
  boardForm:{reject:'Revisa a recusa da proposta, preservando o registro de moderação.'},
@@ -71,6 +71,10 @@ function description(button,state){
  if(button.matches('a[download]'))return button.getAttribute('href')?.includes('/backup')?'Baixa uma cópia cifrada da campanha para recuperação. Guarde o arquivo em privado.':'Baixa o arquivo indicado; não modifica a campanha.';
  if(button.type!=='submit'||!button.form)return null;
  const f=button.form.dataset,value=button.value;
+ if(f.contentForm==='quick'&&value==='publish-notice')return 'Publica este aviso no quadro escolhido, respeitando seus destinatários.';
+ if(f.contentForm==='quick'&&value==='discover')return 'Revela o registro aos alunos selecionados. Notas privadas continuam reservadas ao Mestre.';
+ if(f.contentForm==='quick'&&state.page.includes('/newspapers/'))return value==='publish'?'Publica esta notícia para todos os jogadores.':'Guarda a notícia em privado, sem publicar.';
+ if(f.mailForm==='compose'&&value==='send')return 'Salva esta versão e envia à fila do Mestre. A entrega aos destinatários continua manual.';
  if(f.quickCreate)return 'Cria um rascunho privado para editar, sem publicar ou revelar aos jogadores.';
  if('calendarForm' in f)return 'Salva o ano e a data preparados; a data publicada só muda ao confirmar a publicação.';
  if(f.npcForm==='reveal')return value==='revoke'?'Retira esta informação da leitura dos personagens marcados, preservando o histórico.':'Revela o texto publicado desta informação aos personagens marcados.';

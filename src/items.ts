@@ -10,6 +10,7 @@ import { renderImage } from './workshop.ts';
 type ItemPayload = {
     name: string;
     description: string;
+    effectsText?: string;
     fileId: string | null;
     alt: string;
     crop: MediaPayload['crop'];
@@ -49,7 +50,7 @@ const policyOf = (row: Row, published = false): Policy => JSON.parse(String(publ
 const privateOf = (row: Row): ItemPrivate => JSON.parse(String(row.private_json));
 async function validatePayload(db: DB, value: unknown): Promise<ItemPayload> {
     const data = record(value);
-    fields(data, ['name', 'description', 'fileId', 'alt', 'crop']);
+    fields(data, ['name', 'description', 'effectsText', 'fileId', 'alt', 'crop']);
     const fileId = data.fileId === null ? null : text(data.fileId, 100);
     if (fileId)
         await exists(db, 'workshop_files', fileId);
@@ -59,7 +60,7 @@ async function validatePayload(db: DB, value: unknown): Promise<ItemPayload> {
     const x = coordinate(crop.x, 0), y = coordinate(crop.y, 0), width = coordinate(crop.width, 0.1), height = coordinate(crop.height, 0.1);
     if (x + width > 100 || y + height > 100)
         fail(400, 'O corte ultrapassa a imagem.');
-    return { name: text(data.name, 120), description: text(data.description, 3000, false), fileId, alt: text(data.alt, 300, false), crop: { x, y, width, height } };
+    return { name: text(data.name, 120), description: text(data.description, 3000, false), effectsText:text(data.effectsText??'',4000,false), fileId, alt: text(data.alt, 300, false), crop: { x, y, width, height } };
 }
 function validatePrivate(value: unknown, previous: Effect[] = []): ItemPrivate {
     const data = record(value), short = ['category', 'quality', 'magicDegree', 'activation', 'uses', 'frequency', 'craftingComplexity', 'availability', 'rarity', 'requirements'] as const;
@@ -104,9 +105,9 @@ async function revision(db: DB, row: Row, actor: Session, action: string) {
 async function canRead(db: DB, viewer: Viewer, row: Row) { return row.status === 'PUBLISHED' && !!row.published_json && (viewer.role === 'MASTER' || await policyAllows(db, viewer, policyOf(row, true))); }
 function project(row: Row, draft = false, image?: string) {
     const p = payloadOf(row, !draft);
-    return { id: row.id, name: p.name, description: p.description, alt: p.fileId ? p.alt : '', image: p.fileId ? (image ?? `/api/workshop/items/${row.id}/image?stamp=${imageStamp(row)}`) : null };
+    return { id: row.id, name: p.name, description: p.description, ...(p.effectsText?{effectsText:p.effectsText}:{}), alt: p.fileId ? p.alt : '', image: p.fileId ? (image ?? `/api/workshop/items/${row.id}/image?stamp=${imageStamp(row)}`) : null };
 }
-function copyText(row: Row) { const p = payloadOf(row, true); return { text: [p.name, p.description].filter(Boolean).join('\n\n') }; }
+function copyText(row: Row) { const p = payloadOf(row, true); return { text: [p.name, p.description, p.effectsText].filter(Boolean).join('\n\n') }; }
 async function createItem(db: DB, actor: Session, data: Record<string, unknown>) {
     fields(data, ['payload', 'policy', 'private']);
     const payload = await validatePayload(db, data.payload), policy = await validatePolicy(db, data.policy), internal = validatePrivate(data.private), id = randomUUID();

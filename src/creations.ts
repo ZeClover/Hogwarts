@@ -37,7 +37,7 @@ export async function handleCreations(req: IncomingMessage, res: ServerResponse,
     const variants: Record<string, string> = { a: 'aAáàâãäÁÀÂÃÄ', e: 'eEéèêëÉÈÊË', i: 'iIíìîïÍÌÎÏ', o: 'oOóòôõöÓÒÔÕÖ', u: 'uUúùûüÚÙÛÜ', c: 'cCçÇ' };
     const pattern = [...q].map(char => variants[char] ? `[${variants[char]}]` : /[a-z]/.test(char) ? `[${char}${char.toUpperCase()}]` : char === '[' ? '[[]' : char === ']' ? '[]]' : char === '*' ? '[*]' : char === '?' ? '[?]' : char).join('');
     const params = [q, '*' + pattern + '*', kind, kind];
-    const base = `WITH creations AS (${union}), filtered AS (SELECT * FROM creations WHERE (?='' OR title GLOB ?) AND (?='' OR kind=?))`;
+    const base = `WITH creations AS (${union}), filtered AS (SELECT * FROM creations WHERE (?='' OR title GLOB ?) AND (?='' OR kind=?) AND kind NOT IN ('years','events','timetables') AND NOT (kind='stories' AND id IN (SELECT story_id FROM legacy_story_missions)))`;
     const groups = await all(db, `${base} SELECT status,COUNT(*) n,SUM(CASE WHEN pending THEN 1 ELSE 0 END) pending FROM filtered GROUP BY status`, ...params);
     const counts: Record<string, number> = { ALL: 0, IN_PROGRESS: 0, DRAFT: 0, PREPARED: 0, PUBLISHED: 0, ARCHIVED: 0 };
     for (const row of groups) {

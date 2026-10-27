@@ -12,7 +12,7 @@ test('seis criadores usam só título e conservam rascunhos, sem associar primei
  await page.setViewportSize({width:390,height:844});await login(page);
  for(const kind of ['books','lessons','shops','offers','regions','places']){
   await page.goto(f.config.origin+'/portal/mestre/oficinas/conteudos/'+kind+'/novo');
-  const form=page.locator('[data-content-form="quick"]');await expect(form).toBeVisible();await expect(form.locator('[required]')).toHaveCount(1);await expect(page.locator('[type=file],[type=checkbox]')).toHaveCount(0);
+  const form=page.locator('[data-content-form="quick"]');await expect(form).toBeVisible();await expect(form.locator('[required]')).toHaveCount(1);await expect(page.locator('[type=file]:visible,[type=checkbox]:visible')).toHaveCount(0);
   await form.locator('[name=name]').fill('MÍNIMO '+kind);
   await page.evaluate(()=>{const form=document.querySelector('[data-content-form="quick"]');form.requestSubmit();form.requestSubmit();});
   await page.waitForURL(url=>url.pathname.startsWith('/portal/mestre/oficinas/conteudos/'+kind+'/')&&!url.pathname.endsWith('/novo'));

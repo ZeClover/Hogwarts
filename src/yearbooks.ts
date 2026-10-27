@@ -2,13 +2,13 @@ import { all, one, type DB } from './db.ts';
 import { fail } from './auth.ts';
 import { registerContent, registerReference, type Field, type ContentPayload } from './content.ts';
 import { documentFields, validateDocument, documentSections, registerDocumentKind, notifyDocument } from './journal.ts';
-registerReference('houseResults', async (db) => (await all(db, 'SELECT id,snapshot_json FROM house_results ORDER BY rowid DESC')).map(r => { const s = JSON.parse(String(r.snapshot_json)); return { id: String(r.id), name: s.academicYearLabel + ' · resultado ' + s.revision }; }));
+registerReference('houseResults', async (db) => (await all(db, 'SELECT id,snapshot_json FROM house_results UNION ALL SELECT id,snapshot_json FROM cup_cycle_results')).map(r => { const s = JSON.parse(String(r.snapshot_json)); return { id: String(r.id), name: s.academicYearLabel + ' · resultado ' + s.revision }; }));
 async function result(db: DB, p: ContentPayload) {
     if (!p.resultId)
         return null;
-    const r = await one(db, 'SELECT snapshot_json FROM house_results WHERE id=?', String(p.resultId)) ?? fail(422, 'Resultado oficial não encontrado.');
+    const r = (await one(db, 'SELECT snapshot_json FROM house_results WHERE id=?', String(p.resultId)) ?? await one(db,'SELECT snapshot_json FROM cup_cycle_results WHERE id=?',String(p.resultId))) ?? fail(422, 'Resultado oficial não encontrado.');
     const s = JSON.parse(String(r.snapshot_json));
-    if (s.academicYear !== p.academicYear)
+    if (!String(s.academicYear).startsWith('cycle-') && s.academicYear !== p.academicYear)
         fail(422, 'Escolha o resultado oficial do mesmo ano.');
     return s as {
         winnerHouseId: string;

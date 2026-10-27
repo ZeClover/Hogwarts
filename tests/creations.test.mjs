@@ -17,8 +17,8 @@ test('índice MASTER pagina todas as origens; jogador e preview não recebem reg
   assert.equal((await f.master.request('/api/master/workshop/media',{method:'POST',body:{payload:{title:'ÍNDICE mídia',description:'',alt:'',category:'SCENERY',credit:'',academicYear:'1890–1891',presentation:'SCENE',fileId:file.id,crop:{x:0,y:0,width:100,height:100}},policy,privateNotes:'SEGREDO'}})).status,201);
   const url='/api/master/creations?q='+encodeURIComponent('ÍNDICE')+'&status=ALL';
   const first=(await f.master.request(url)).value,second=(await f.master.request(url+'&page=2')).value;
-  assert.equal(first.total,52);assert.equal((await f.master.request('/api/master/creations?q=indice&status=ALL')).value.total,52);assert.equal(first.items.length,24);assert.equal(second.items.length,24);assert.equal(new Set([...first.items,...second.items].map(r=>r.kind+':'+r.id)).size,48);assert.equal(first.counts.DRAFT,52);
-  const third=(await f.master.request(url+'&page=3')).value;assert.equal(third.items.length,4);assert.equal(new Set([...first.items,...second.items,...third.items].map(r=>r.kind+':'+r.id)).size,52);assert.equal((await f.master.request(url+'&page=4')).value.items.length,0);
+  assert.equal(first.total,49);assert.equal((await f.master.request('/api/master/creations?q=indice&status=ALL')).value.total,49);assert.equal(first.items.length,24);assert.equal(second.items.length,24);assert.equal(new Set([...first.items,...second.items].map(r=>r.kind+':'+r.id)).size,48);assert.equal(first.counts.DRAFT,49);
+  const third=(await f.master.request(url+'&page=3')).value;assert.equal(third.items.length,1);assert.equal(new Set([...first.items,...second.items,...third.items].map(r=>r.kind+':'+r.id)).size,49);assert.equal((await f.master.request(url+'&page=4')).value.items.length,0);
   assert.equal((await f.master.request(url+'&kind=lessons')).value.total,1);
   assert.equal((await f.master.request('/api/master/creations?q=%25&status=ALL')).value.total,0);
   assert.ok(!JSON.stringify(first).includes('SEGREDO'));assert.ok(!JSON.stringify(first).includes('draft_json'));

@@ -1,4 +1,4 @@
-import { validationDatabase } from './import-validation.ts';
+import { upgradeBackupState, validationDatabase } from './import-validation.ts';
 import type { Statement } from './async-db.ts';
 import { handleArchiveUploads, archiveInput } from './archive-uploads.ts';
 import { privateStorage } from './storage.ts';
@@ -96,8 +96,10 @@ async function unseal(db: DB, config: Config, value: Record<string, unknown>): P
     catch {
         fail(422, 'Backup inválido ou de outra instalação.');
     }
-    if (result.schema !== await schemaHash(db))
-        fail(422, 'A versão das migrations difere. Use a recuperação operacional documentada.');
+    if (result.schema !== await schemaHash(db)) {
+        try { const upgraded=await upgradeBackupState(config,result.schema,result.tables);result={...result,...upgraded}; } catch { fail(422,'Não foi possível migrar esta cópia em segurança. Use a recuperação operacional documentada.'); }
+        if(result.schema!==await schemaHash(db))fail(422,'Estrutura de backup incompatível.');
+    }
     const live = (await tables(db)).map(t => String(t.name));
     if (!result.tables || Object.keys(result.tables).sort().join() !== live.sort().join() || !Array.isArray(result.media))
         fail(422, 'Estrutura de backup incompleta.');

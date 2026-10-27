@@ -19,3 +19,9 @@ export async function openPolicy(page){
   const details=page.locator('[data-compact-policy]').first();
   if(await details.count()&&await details.getAttribute('open')===null)await details.locator(':scope > summary').click();
 }
+
+// Secondary sections retain their state after saving. Open them only if closed.
+export async function openDisclosure(page,title){
+ const summary=page.getByText(title,{exact:true}).and(page.locator('summary'));
+ if(!await summary.evaluate(el=>el.closest('details')?.open??false))await summary.click();
+}

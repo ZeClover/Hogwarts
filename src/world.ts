@@ -10,6 +10,7 @@ const defaultPolicy = { audience: 'ALL', characters: [], groups: [], houses: [],
 const assets = readdirSync('public/assets').filter(n => n.endsWith('.webp'));
 for (const [name, table, column] of [['characters', 'characters', 'name'], ['houses', 'houses', 'name'], ['regions', 'regions', 'title'], ['places', 'locations', 'title'], ['npcs', 'npcs', 'draft_json'], ['items', 'catalog_items', 'draft_json'], ['files', 'workshop_files', 'id']] as const)
     registerReference(name, async (db) => (await all(db, `SELECT id,${column} AS value FROM ${table}`)).map(r => ({ id: String(r.id), name: column === 'draft_json' ? String(JSON.parse(String(r.value)).name) : String(r.value) })));
+registerReference('files',async(db)=>(await all(db,"SELECT f.id,f.width,f.height,e.draft_json FROM workshop_files f LEFT JOIN editorial_entries e ON json_extract(e.draft_json,'$.fileId')=f.id ORDER BY f.created_at DESC,f.id")).map((r,i)=>({id:String(r.id),name:r.draft_json?String(JSON.parse(String(r.draft_json)).title):'Imagem '+(i+1)+' · '+r.width+' × '+r.height})));
 registerReference('assets', () => assets.map(id => ({ id, name: id.replaceAll('_', ' ').replace('.webp', '') })));
 registerReference('shops', async (db) => (await all(db, "SELECT id,draft_json FROM content_records WHERE kind='shops'")).map(r => ({ id: String(r.id), name: String(JSON.parse(String(r.draft_json)).title) })));
 const title: Field = { name: 'title', label: 'Nome', required: true, max: 120 }, description: Field = { name: 'description', label: 'Descrição pública', type: 'textarea', max: 4000 };
@@ -33,10 +34,11 @@ export async function publicItem(db: DB, v: Viewer, id: string) {
     const p = JSON.parse(String(row.published_json)) as {
         name: string;
         description: string;
+        effectsText?: string;
         fileId: string | null;
         alt: string;
     };
-    return { id: row.id, title: p.name, description: p.description, image: p.fileId ? '/api/workshop/items/' + id + '/image?stamp=' + imageStamp(row) : null, alt: p.alt };
+    return { id: row.id, title: p.name, description: [p.description,p.effectsText].filter(Boolean).join('\n\n'), image: p.fileId ? '/api/workshop/items/' + id + '/image?stamp=' + imageStamp(row) : null, alt: p.alt };
 }
 export async function publicShop(db: DB, v: Viewer, id: string) { const shop = await one(db, "SELECT * FROM content_records WHERE kind='shops' AND id=?", id); return shop && await contentAllowed(db, v, shop) ? shop : null; }
 registerContent('shops', { label: 'Lojas e estabelecimentos', singular: 'Loja', fields: [title, description, { name: 'locationId', label: 'Local', type: 'reference', source: 'places', required: true, draftOptional: true }, { name: 'npcId', label: 'Comerciante', type: 'reference', source: 'npcs' }, ...imageFields, { name: 'hasCatalog', label: 'Possui catálogo', type: 'checkbox' }, { name: 'available', label: 'Estabelecimento disponível', type: 'checkbox' }],

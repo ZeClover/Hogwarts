@@ -51,8 +51,8 @@ async function validate(db: DB, actor: Session, value: unknown): Promise<Letter>
     const style = text(d.style, 30);
     if (!['PARCHMENT', 'FORMAL', 'SCRAPBOOK'].includes(style))
         fail(400, 'Modelo inválido.');
-    const academicYear = text(d.academicYear, 100);
-    if (!await knownAcademicYear(db, academicYear))
+    const academicYear = text(d.academicYear ?? '', 100, false);
+    if (academicYear && !await knownAcademicYear(db, academicYear))
         fail(422, 'Ano letivo desconhecido.');
     return { subject: text(d.subject, 180, false), body: text(d.body, 16000, false), signature: text(d.signature, 200, false), senderNpcId, senderName, characters, npcs, academicYear, style, templateId: typeof d.templateId === 'string' ? d.templateId : null, template: await templateSnapshot(db, d.templateId, 'LETTER') };
 }

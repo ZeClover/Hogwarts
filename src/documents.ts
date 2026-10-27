@@ -1,3 +1,4 @@
+import {giveItem} from './possessions.ts';
 import { privateStorage } from './storage.ts';
 import { filterAsync, forEachAsync, mapAsync } from './async-array.ts';
 import { templateChoices, templateSnapshot, type TemplateSnapshot } from './templates-model.ts';
@@ -169,15 +170,18 @@ registerReward('ITEM', { validate: async (db, p) => {
         const item = await one(db, "SELECT published_json FROM catalog_items WHERE id=? AND status='PUBLISHED'", p.referenceId);
         if (!item)
             fail(422, 'Publique o item antes de conceder.');
-    }, apply: async (db, _actor, p, character) => {
+    }, apply: async (db, actor, p, character, commandKey) => {
         const item = (await one(db, 'SELECT * FROM catalog_items WHERE id=?', p.referenceId))!;
         if (!await policyAllows(db, { role: 'PLAYER', userId: '', characterId: character, preview: false }, JSON.parse(String(item.published_policy_json)) as Policy))
             fail(422, 'Um destinatário não pode consultar o item.');
         const known = JSON.parse(String(item.published_json)) as {
             name: string;
             description: string;
+            effectsText?: string;
         };
-        return { kind: 'ITEM', title: known.name, text: known.description, itemId: p.referenceId };
+        const description=[known.description,known.effectsText].filter(Boolean).join('\n\n');
+        await giveItem(db,actor.userId,character,p.referenceId!,1,'reward:'+commandKey,{title:known.name,description});
+        return { kind: 'ITEM', title: known.name, text: description, itemId: p.referenceId };
     } });
 async function validatePlan(db: DB, value: unknown): Promise<RewardPlan> {
     const p = record(value);
@@ -329,6 +333,18 @@ export async function handleDocuments(req: IncomingMessage, res: ServerResponse,
         if (path === '/api/documents/certificates' && method === 'GET') {
             send(res, 200, { items: await mapAsync(await filterAsync((await all(db, 'SELECT * FROM certificate_issues WHERE released=1')), async (r) => await canIssue(db, viewer, r)), async (r) => ({ ...await publicIssue(db, r), isOwner: (await certificate(db, String(r.certificate_id))).character_id === viewer.characterId, shares: (await certificate(db, String(r.certificate_id))).character_id === viewer.characterId ? JSON.parse(String(r.shares_json)) : [] })) });
             return true;
+        }
+        if(path==='/api/documents/inventory'&&method==='GET') {
+            send(res,200,{items:(await all(db,'SELECT id,item_id,quantity,snapshot_json FROM item_possessions WHERE character_id=? ORDER BY created_at,id',viewer.characterId)).map(r=>({id:r.id,itemId:r.item_id,quantity:r.quantity,...JSON.parse(String(r.snapshot_json))}))});return true;
+        }
+        if(path==='/api/documents/seals'&&method==='GET') {
+            const items=[];
+            for(const row of await all(db,'SELECT o.*,q.published_json,q.published_policy_json FROM quest_outcomes o JOIN quests q ON q.id=o.quest_id JOIN quest_participants p ON p.quest_id=q.id AND p.character_id=? AND p.active=1 ORDER BY o.created_at DESC,o.id',viewer.characterId)) {
+                const legacy=await one(db,'SELECT s.protagonist_id FROM legacy_story_missions m JOIN personal_story_arcs s ON s.id=m.story_id WHERE m.quest_id=?',String(row.quest_id));
+                if((legacy&&legacy.protagonist_id!==viewer.characterId)||!JSON.parse(String(row.characters_json)).includes(viewer.characterId)||!row.published_json||!await policyAllows(db,viewer,JSON.parse(String(row.published_policy_json))))continue;
+                const outcome=JSON.parse(String(row.public_json));items.push({id:row.id,questId:row.quest_id,title:JSON.parse(String(row.published_json)).title,...outcome});
+            }
+            send(res,200,{items});return true;
         }
         if (path === '/api/documents/rewards' && method === 'GET') {
             send(res, 200, { items: (await all(db, 'SELECT id,receipt_json FROM reward_grants WHERE character_id=?', viewer.characterId)).map(r => ({ id: r.id, ...JSON.parse(String(r.receipt_json)) })) });

@@ -61,7 +61,7 @@ async function operation(db: DB, actor: Session, row: Row, action: string, data:
     if (row.kind === 'bestiary' && reveal) {
         if (data.observed !== true)
             fail(422, 'Confirme que os observadores presenciaram o encontro.');
-        text(data.encounter, 2000);
+        text(data.encounter??'', 2000, false);
     }
     for (const char of chars) {
         await exists(db, 'characters', char);
@@ -79,13 +79,13 @@ async function operation(db: DB, actor: Session, row: Row, action: string, data:
 const common: Field[] = [{ name: 'title', label: 'Nome', required: true, max: 180 }, { name: 'description', label: 'Apresentação revelada', type: 'richtext', max: 8000 }, { name: 'fileId', label: 'Imagem opcional', type: 'image', advanced: true }, { name: 'alt', label: 'Texto alternativo', max: 300, advanced: true }];
 for (const kind of collectionKinds) {
     registerProgressiveKind(kind);
-    registerContent(kind, { label: names[kind]![0], singular: names[kind]![1], retainArchive: true, imageField: '__discoveryImage', fields: [...common, ...(kind === 'chocolatecards' ? [{ name: 'rarity', label: 'Raridade', type: 'select', options: ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'], required: true }, { name: 'season', label: 'Temporada', max: 100, required: true, draftOptional: true }, { name: 'eligible', label: 'Elegível para pacotes', type: 'checkbox' }] as Field[] : kind === 'bestiary' ? [{ name: 'classification', label: 'Classificação', max: 180 }, { name: 'notableIndividuals', label: 'Indivíduos notáveis (planejamento privado)', type: 'textarea', max: 4000, advanced: true }] as Field[] : kind === 'rarities' ? [{ name: 'bookId', label: 'Obra extraordinária', type: 'reference', source: 'books', required: true, draftOptional: true }] as Field[] : kind === 'memories' ? [{ name: 'narrativeDate', label: 'Data da recordação', max: 120 }] as Field[] : [{ name: 'itemId', label: 'Item relacionado (não concede posse)', type: 'reference', source: 'items' }] as Field[]), ...(kind === 'rarities' ? [] : [{ name: 'pages', label: 'Informações por camadas', type: 'blocks', fields: pageFields.map(f => ({ ...f, label: ({ title: 'Título da camada', text: 'Conteúdo da camada', fileId: 'Ilustração da camada', alt: 'Texto alternativo da camada', policy: 'Restrições da camada' } as Record<string, string>)[f.name] ?? f.label })), max: 50 }] as Field[])], validate: (db, p) => {
+    registerContent(kind, { label: names[kind]![0], singular: names[kind]![1], retainArchive: true, imageField: '__discoveryImage', fields: [...common, ...(kind === 'chocolatecards' ? [{ name: 'rarity', label: 'Raridade', type: 'select', options: ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY'], required: true }, { name: 'season', label: 'Temporada (opcional)', max: 100 }, { name: 'eligible', label: 'Elegível para pacotes', type: 'checkbox' }] as Field[] : kind === 'bestiary' ? [{ name: 'classification', label: 'Classificação', max: 180 }, { name: 'notableIndividuals', label: 'Indivíduos notáveis (planejamento privado)', type: 'textarea', max: 4000, advanced: true }] as Field[] : kind === 'rarities' ? [{ name: 'bookId', label: 'Obra extraordinária', type: 'reference', source: 'books' }] as Field[] : kind === 'memories' ? [{ name: 'narrativeDate', label: 'Data da recordação', max: 120 }] as Field[] : [{ name: 'itemId', label: 'Item relacionado (não concede posse)', type: 'reference', source: 'items' }] as Field[]), ...(kind === 'rarities' ? [] : [{ name: 'pages', label: 'Informações por camadas', type: 'blocks', fields: pageFields.map(f => ({ ...f, label: ({ title: 'Título da camada', text: 'Conteúdo da camada', fileId: 'Ilustração da camada', alt: 'Texto alternativo da camada', policy: 'Restrições da camada' } as Record<string, string>)[f.name] ?? f.label })), max: 50 }] as Field[])], validate: (db, p) => {
             if (p.fileId && !p.alt)
                 fail(422, 'Preencha o texto alternativo.');
             if (kind !== 'rarities')
                 libraryValidate(db, p);
         }, published: async (db, row) => {
-            if (kind === 'rarities') {
+            if (kind === 'rarities' && contentPayload(row).bookId) {
                 const book = await contentRecord(db, 'books', String(contentPayload(row).bookId));
                 if (book.status !== 'PUBLISHED' || contentPayload(book).category !== 'RARE')
                     fail(422, 'Publique a obra como Raridade antes de publicar a coleção.');

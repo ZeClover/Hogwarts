@@ -1,9 +1,10 @@
-import {settleAnimations} from './browser-helpers.mjs';
+import {openDisclosure,settleAnimations} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { fixture } from './helpers.mjs';
 let f;
+test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots',{recursive:true});});
 test.afterAll(async()=>{await f?.close();});
 async function login(page,email) {
@@ -64,7 +65,7 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
   await expect(page.getByRole('heading',{name:'Central do Mestre'})).toBeVisible();
   await noOverflow(page);await accessible(page);
   await page.screenshot({path:'docs/screenshots/mestre-desktop.png',fullPage:true});
-  const regionForm=page.locator('form[data-form="region"][data-id="hogsmeade"]');
+  await openDisclosure(page,'Regiões e caminhos');const regionForm=page.locator('form[data-form="region"][data-id="hogsmeade"]');
   await regionForm.locator('[name="isOpen"]').check();
   await regionForm.locator('[name="audience"]').selectOption('SELECTED');
   await regionForm.locator('[name="characters"][value="atlas"]').check();
@@ -104,7 +105,7 @@ test('Mestre administra acessos, troca entre quatro Casas sem recarregar e vê c
 
 test('convite real pelo painel conclui onboarding e aceitação aparece na auditoria',async({page,browser})=>{
   await login(page,'master@test.invalid');
-  const form=page.locator('form[data-form="invite"]');
+  await openDisclosure(page,'Convites pessoais');const form=page.locator('form[data-form="invite"]');
   await form.getByLabel('E-mail',{exact:true}).fill('drake@test.invalid');
   await form.getByLabel('Personagem',{exact:true}).selectOption('drake');
   await form.getByRole('button',{name:'Gerar convite'}).click();
@@ -115,5 +116,5 @@ test('convite real pelo painel conclui onboarding e aceitação aparece na audit
   await newcomer.getByRole('button',{name:'Aceitar convite'}).click();
   await expect(newcomer.locator('.persona-link')).toContainText('Drake Lovegood');
   await expect(newcomer.locator('html')).toHaveAttribute('data-house','ravenclaw');await context.close();
-  await page.reload();await expect(page.locator('#audit')).toContainText('Convite aceito');
+  await page.goto(f.config.origin+'/portal/mestre/seguranca');await openDisclosure(page,'Avançado: auditoria');await expect(page.locator('#audit')).toContainText('INVITE_ACCEPTED');
 });

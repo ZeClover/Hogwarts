@@ -59,7 +59,7 @@ test('SQL do Studio usa transacao do executor e preserva estrutura, seed e gatil
     const schema="SELECT type,name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name";
     assert.deepEqual((await client.execute(schema)).rows.map(row=>({...row})),baseline.prepare(schema).all().map(row=>({...row})));
     const counts=(await client.execute('SELECT (SELECT count(*) FROM schema_migrations) migrations,(SELECT count(*) FROM houses) casas,(SELECT count(*) FROM characters) personagens,(SELECT count(*) FROM content_records) content')).rows[0];
-    assert.deepEqual({...counts},{migrations:20,casas:4,personagens:5,content:baseline.prepare('SELECT count(*) n FROM content_records').get().n});
+    assert.deepEqual({...counts},{migrations:21,casas:4,personagens:5,content:baseline.prepare('SELECT count(*) n FROM content_records').get().n});
     await client.execute("INSERT INTO regions(id,title,audience) VALUES('studio-test','Teste','ALL')");
     assert.equal((await client.execute("SELECT kind FROM content_records WHERE id='studio-test'")).rows[0].kind,'regions');
     assert.deepEqual((await client.execute('PRAGMA foreign_key_check')).rows,[]);

@@ -14,7 +14,7 @@ test('missão só com título mantém campos entre abas, política privada e pub
  await page.getByLabel('Título',{exact:true}).fill('MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await help.locator('summary').click();await expect(page.getByLabel('Título',{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await page.getByLabel('Tipo',{exact:true}).selectOption('Missão de grupo');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await help.locator('summary').click();await expect(page.getByLabel('Tipo',{exact:true})).toHaveValue('Missão de grupo');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();
  const id=new URL(page.url()).pathname.split('/').pop();
- await expect(page.getByRole('tab')).toHaveCount(9);
+ await expect(page.getByRole('tab')).toHaveCount(8);
  await page.getByLabel('Título',{exact:true}).fill('MISSÃO EDITADA NA FIXTURE');
  await page.getByRole('tab',{name:'NPCs/locais',exact:true}).click();await page.getByLabel('Gancho público',{exact:true}).fill('Texto preparado sem publicar.');
  expect((await f.master.request('/api/master/campaign/quests/'+id)).value.payload.title).toBe('MISSÃO RÁPIDA DA FIXTURE');
@@ -60,5 +60,5 @@ test('abrir criação avançada conserva o texto já digitado e todos os recurso
  await page.getByLabel('Nome',{exact:true}).fill('OBJETO EM PREPARAÇÃO');await page.getByLabel('Descrição (opcional)',{exact:true}).fill('Texto que não pode se perder.');
  await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();
  await expect(page.getByLabel('Nome',{exact:true})).toHaveValue('OBJETO EM PREPARAÇÃO');await expect(page.getByLabel('Descrição revelada',{exact:true})).toHaveValue('Texto que não pode se perder.');
- for(const title of ['Imagem e corte','Propriedades e fabricação','Efeitos do item','Valores e segredos do Mestre'])await expect(page.getByText(title,{exact:true})).toBeVisible();
+ for(const title of ['Imagem e corte','Propriedades e fabricação','Avançado: efeitos estruturados antigos','Valores e segredos do Mestre'])await expect(page.getByText(title,{exact:true})).toBeVisible();
 });

@@ -88,9 +88,9 @@ async function optional(db: DB, value: unknown, entity: 'locations' | 'workshop_
 async function validatePayload(db: DB, value: unknown): Promise<Payload> {
     const p = record(value);
     fields(p, ['title', 'summary', 'kind', 'academicYear', 'fileId', 'alt', 'npcId', 'locationId', 'hook']);
-    if (!await knownAcademicYear(db, p.academicYear))
+    if (p.academicYear && !await knownAcademicYear(db, p.academicYear))
         fail(400, 'Selecione o ano letivo disponível.');
-    return { title: text(p.title, 120), summary: text(p.summary, 3000, false), kind: text(p.kind, 80, false), academicYear: String(p.academicYear),
+    return { title: text(p.title, 120), summary: text(p.summary, 3000, false), kind: text(p.kind, 80, false), academicYear: String(p.academicYear ?? ''),
         fileId: await optional(db, p.fileId, 'workshop_files'), alt: text(p.alt, 300, false), npcId: await optional(db, p.npcId, 'npcs'), locationId: await optional(db, p.locationId, 'locations'), hook: text(p.hook, 2000, false) };
 }
 function validatePrivate(value: unknown): Internal {
@@ -128,6 +128,7 @@ async function adminDTO(db: DB, domain: Domain, row: Row) {
             reveals: (await reveals(db, String(row.id))).map(r => ({ entryId: r.entry_id, title: JSON.parse(String(r.snapshot_json)).title, active: !!r.active, sourceRevision: r.source_revision })) }) };
 }
 async function eligible(db: DB, viewer: Viewer, domain: Domain, row: Row, draft = false) {
+    if(domain==='quests'){const legacy=await one(db,'SELECT s.protagonist_id,s.published_policy_json FROM legacy_story_missions m JOIN personal_story_arcs s ON s.id=m.story_id WHERE m.quest_id=?',String(row.id));if(legacy&&(legacy.protagonist_id!==viewer.characterId||legacy.published_policy_json&&!await policyAllows(db,viewer,JSON.parse(String(legacy.published_policy_json)))))return false;}
     return !!viewer.characterId && (domain === 'quests' || row.protagonist_id === viewer.characterId) && await policyAllows(db, viewer, policy(row, !draft));
 }
 async function canAnnounce(db: DB, viewer: Viewer, row: Row) { return row.status === 'PUBLISHED' && row.operation_state !== 'CLOSED' && !!row.published_json && await eligible(db, viewer, 'quests', row); }
@@ -141,7 +142,7 @@ export async function campaignNews(db: DB, viewer: Viewer) {
     const result: { id: string; title: string; kind: string; href: string; order: number }[] = [];
     for (const domain of ['quests', 'stories'] as const)
         for (const row of await all(db, `SELECT * FROM ${table(domain)} WHERE status='PUBLISHED' ORDER BY published_at DESC,id`))
-            if (await canRead(db, viewer, domain, row))
+            if (!(domain==='stories'&&await one(db,'SELECT story_id FROM legacy_story_missions WHERE story_id=?',String(row.id)))&&await canRead(db, viewer, domain, row))
                 result.push({ id: String(row.id), title: payload(row, true).title, kind: domain, href: '/portal/missoes/' + (domain === 'quests' ? 'grupo/' : 'historias/') + row.id, order: Number(row.published_at) });
     return result;
 }
@@ -164,7 +165,7 @@ async function project(db: DB, viewer: Viewer, domain: Domain, row: Row, { draft
         return { id: e.id, kind: e.kind, title: e.title, text: e.text, ...await links(db, viewer, e), alt: e.fileId ? e.alt : '',
             image: e.fileId ? `/api/campaign/stories/${row.id}/entries/${r.entry_id}/image?stamp=${entryStamp(r)}${viewer.preview ? '&view_as=' + encodeURIComponent(viewer.characterId!) : ''}` : null };
     }) : [];
-    return { id: row.id, title: p.title, summary: p.summary, kind: p.kind, academicYear: String(p.academicYear), hook: p.hook, ...await links(db, viewer, p),
+    return { id: row.id, title: p.title, summary: p.summary, kind: p.kind, academicYear: String(p.academicYear ?? ''), hook: p.hook, ...await links(db, viewer, p),
         image: p.fileId ? (imageURL ?? `/api/campaign/${announcement ? 'announcements' : domain}/${row.id}/image?stamp=${imageStamp(row)}&context=${announcement ? 'announcement' : 'diary'}`) : null, alt: p.fileId ? p.alt : '',
         ...(announcement ? {} : { archived: row.status !== 'PUBLISHED', ...(domain === 'quests' ? { state: row.operation_state === 'CLOSED' ? 'CLOSED' : enrollment?.state ?? null, ...await publicOperations(db, viewer, row) } : { entries: known }) }) };
 }
@@ -317,6 +318,8 @@ async function storyAccess(db: DB, actor: Session, id: string, action: string, d
         }
         else
             await db.prepare('UPDATE personal_story_arcs SET access_active=0 WHERE id=?').run(id);
+        const migrated=await one(db,'SELECT quest_id FROM legacy_story_missions WHERE story_id=?',id);
+        if(migrated){await db.prepare('UPDATE quest_participants SET active=? WHERE quest_id=? AND character_id=?').run(action==='release'?1:0,String(migrated.quest_id),String(before.protagonist_id));await bump(db,'quests',String(migrated.quest_id));}
         await bump(db, 'stories', id);
         const row = await get(db, 'stories', id);
         await revision(db, 'stories', row, actor, action.toUpperCase());
@@ -372,9 +375,10 @@ async function revealEntry(db: DB, actor: Session, id: string, revoke: boolean, 
         expected(before, data.version);
         if (revoke && !await one(db, 'SELECT 1 FROM personal_story_reveals WHERE arc_id=? AND entry_id=?', id, entryId))
             fail(404, 'Entrada revelada não encontrada.');
-        if (revoke)
+        if (revoke) {
+            const migrated=await one(db,'SELECT quest_id FROM legacy_story_missions WHERE story_id=?',id);if(migrated){await db.prepare('UPDATE quest_clue_reveals SET active=0 WHERE quest_id=? AND clue_id=?').run(String(migrated.quest_id),entryId);await bump(db,'quests',String(migrated.quest_id));}
             await db.prepare('UPDATE personal_story_reveals SET active=0,actor_id=?,updated_at=? WHERE arc_id=? AND entry_id=?').run(actor.userId, now(), id, entryId);
-        else {
+        } else {
             const viewer: Viewer = { userId: actor.userId, role: 'PLAYER', characterId: String(before.protagonist_id), preview: true };
             if (before.status !== 'PUBLISHED' || !await canRead(db, viewer, 'stories', before))
                 fail(409, 'Libere o arco publicado ao protagonista antes de revelar.');

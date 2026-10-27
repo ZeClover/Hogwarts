@@ -15,7 +15,7 @@ import { configuration, type Config } from './config.ts';
 import { openDatabase, one, all, transaction, audit, type DB, type Row } from './db.ts';
 import { HttpError, fail, token, digest, email, now, validPassword, hashPassword, verifyPassword, sessionFrom, createSession, clearSession, requireSession, requireMaster, viewerFor, mutationGuard, rateLimit, type Session } from './auth.ts';
 import { portalState, locationVisible, locationDTO, characterDTO, mediaVisible, publicationVisible } from './access.ts';
-import { bodyBuffer, jsonBody, send, text } from './http.ts';
+import { fields, bodyBuffer, jsonBody, send, text } from './http.ts';
 import { handleWorkshop } from './workshop.ts';
 import { handleNPCs, npcReferencesForLocation } from './npcs.ts';
 import { handleItems } from './items.ts';
@@ -225,6 +225,15 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 if (path === '/api/master/state' && method === 'GET')
                     return send(res, 200, await adminState(db));
                 const match = path.match(/^\/api\/master\/(regions|locations|characters|groups|invites|accounts)\/([a-zA-Z0-9-]+)$/);
+                if (path === '/api/master/characters' && method === 'POST') {
+                    const data = await jsonBody(req); fields(data, ['name','house','year']);
+                    const name = text(data.name,100), house = text(data.house,100);
+                    if (!await one(db,'SELECT id FROM houses WHERE id=?',house)) fail(400,'Escolha uma Casa.');
+                    if (!Number.isInteger(data.year) || Number(data.year)<1 || Number(data.year)>7) fail(400,'Escolha um ano escolar de 1 a 7.');
+                    const id = randomUUID();
+                    await transaction(db,async()=>{await db.prepare('INSERT INTO characters(id,name,house_id,school_year) VALUES(?,?,?,?)').run(id,name,house,Number(data.year));await audit(db,actor.userId,'CHARACTER_CREATED','CHARACTER',id);});
+                    return send(res,201,{id});
+                }
                 if (path === '/api/master/invites' && method === 'POST') {
                     const data = await jsonBody(req), address = email(data.email);
                     const role = data.role === 'MASTER' ? 'MASTER' : data.role === 'PLAYER' ? 'PLAYER' : fail(400, 'Papel inválido.');
@@ -429,7 +438,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 mime = 'image/webp';
                 res.setHeader('Cache-Control', 'public, max-age=3600');
             }
-            else if (['/creations.js', '/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
+            else if (['/simplicity.js', '/creations.js', '/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
                 filename = join(config.publicDir, path.slice(1));
                 mime = extname(path) === '.css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
             }

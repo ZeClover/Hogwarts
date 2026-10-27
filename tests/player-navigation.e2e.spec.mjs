@@ -28,8 +28,8 @@ test('menu de cinco ações, Diário direto, escola em dois cliques e navegaçã
  await accessible(page);
  await nav.getByRole('link',{name:'Diário',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Diário',exact:true})).toBeVisible();
- for(const name of ['Missões em Grupo','Histórias Individuais','Investigações'])await expect(page.locator('main').getByRole('link',{name:new RegExp('^'+name)})).toBeVisible();
- await page.getByRole('link',{name:/^Missões em Grupo/}).click();
+ for(const name of ['Minhas missões','Investigações'])await expect(page.locator('main').getByRole('link',{name:new RegExp('^'+name)})).toBeVisible();
+ await page.getByRole('link',{name:/^Minhas missões/}).click();
  await expect(page.getByRole('heading',{name:'Diário de Missões'})).toBeVisible();
  await expect(nav.getByRole('link',{name:'Diário',exact:true})).toHaveAttribute('aria-current','page');
  await nav.getByRole('link',{name:'Início',exact:true}).click();
@@ -39,7 +39,7 @@ test('menu de cinco ações, Diário direto, escola em dois cliques e navegaçã
  await page.getByRole('link',{name:/^Biblioteca Acervo escolar/}).click();
  await expect(page.getByRole('heading',{name:'Biblioteca',exact:true})).toBeVisible();
  await nav.getByRole('link',{name:'Acervos',exact:true}).click();
- await expect(page.locator('.context-links').getByRole('link')).toHaveCount(5);
+ await expect(page.locator('.context-links').getByRole('link')).toHaveCount(6);
  await expect(page.locator('main').getByRole('link',{name:'Diário de Missões'})).toHaveCount(0);
  await accessible(page);
  await page.setViewportSize({width:1440,height:900});await accessible(page);

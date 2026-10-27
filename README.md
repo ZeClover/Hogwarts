@@ -1,10 +1,10 @@
 # Hogwarts 1890 — Arquivos Mágicos
 
-Portal privado da campanha, com as **15 oficinas funcionais** e as etapas F0–F5 implementadas em PRs encadeadas. Mantém a fundação existente, a identidade visual V4 e a independência do Hub RPG. Conteúdo da campanha é criado no Painel do Mestre; não requer código novo para cada missão, objeto, carta ou livro.
+Portal privado da campanha, com os fluxos integrados de criação, sessão e Diário. A revisão das **25 áreas de simplicidade visual** está documentada em [REVISAO_COMPLETA_25.md](docs/REVISAO_COMPLETA_25.md). Mantém a fundação existente, a identidade visual V4 e a independência do Hub RPG. Conteúdo da campanha é criado no Painel do Mestre; não requer código novo para cada missão, objeto, carta ou livro.
 
 [Guia completo do Mestre](docs/GUIA_DO_MESTRE.md) · [Matriz final e evidências](docs/F5_2_ENTREGA.md) · [Entregas por fase](docs/EXECUCAO_COMPLETA.md) · [Hospedagem na Vercel](docs/VERCEL.md)
 
-A Oficina Geral reúne mídia, modelos, NPCs, itens, missões e histórias, regiões/locais/lojas/ofertas, livros/aulas, cinco coleções, correio, murais, calendário/grade, Profeta Diário, Taça, anuários e retrospectivas. A Central da Sessão opera permissões, participantes, objetivos, pistas, recompensas, entregas e pontos. O caderno é escrito pelos jogadores e moderado pelo Mestre.
+A Central do Mestre prioriza criar conteúdo, entregar recompensas, ajustar carteiras, conferir pedidos e cartas e controlar pontos. Histórias pessoais são missões individuais. Lojas incluem seu catálogo; modelos e conjuntos de Sapos ficam nos seus editores. Anuários/retrospectivas pertencem ao Acervo/Diário; arquivos e auditoria ficam em Segurança e Backups. Calendário, eventos e grades foram retirados da interface, mantendo dados e APIs de compatibilidade.
 
 Rascunho, publicação, revelação, emissão e concessão são separados. PDFs são individuais; carteira/estoque/recompensas e pacotes têm operações atômicas e proteção contra repetição. Rascunhos de cartas e notas pessoais permanecem privados dos autores, inclusive contra o Mestre. Publicação do Profeta é global; retrospectivas são individuais. Não há avanço automático do calendário nem resolução de teorias ou missões pelo site.
 
@@ -65,11 +65,11 @@ SQLite com migrations transacionais e volume privado em `DATA_DIR`. Políticas e
 
 A Oficina oferece exportação autoral/importação revisada como rascunhos e backup cifrado/recuperação da campanha. A chave fica em `DATA_DIR/backup.key` na instalação local ou em `BACKUP_ENCRYPTION_KEY` na nuvem; o Mestre não recebe rascunhos privados em texto legível. Recuperação preserva contas, sessões, convites e auditoria atuais. Regras e limites detalhados no [guia](docs/GUIA_DO_MESTRE.md).
 
-Para cópia operacional, pare o servidor e execute `npm run backup -- /caminho/privado`. O comando copia SQLite, `media/` e a chave de backup, quando existir. Guarde esse conjunto privado e cifrado fora do host. Para recuperar a instalação: preserve o diretório atual; restaure banco, mídia e chave do mesmo conjunto em `DATA_DIR` novo, sem WAL/SHM antigos; migre e teste isoladamente antes de iniciar o acesso real.
+Para cópia operacional, pare o servidor e execute `npm run backup -- /caminho/privado`. O comando abre o banco em modo somente leitura, sem executar migrations, e copia SQLite, `media/` e a chave de backup, quando existir. Guarde esse conjunto privado e cifrado fora do host. Para recuperar a instalação: preserve o diretório atual; restaure banco, mídia e chave do mesmo conjunto em `DATA_DIR` novo, sem WAL/SHM antigos; migre e teste isoladamente antes de iniciar o acesso real.
 
 ## Limites da entrega
 
-O mapa de Hogsmeade permanece provisório artisticamente. O inventário mecânico pertence ao Hub; a integração é manual pelos campos públicos dos comprovantes. Não há chatbot, resposta automática de NPC, geração de imagens por IA, envio ao Discord, MFA ou recuperação automática de senha. A tabela legada `publications` não é o editor de notícias: os editores atuais possuem domínios e filas próprios. Deploy, domínio e merge não são executados por esta entrega.
+O mapa de Hogsmeade permanece provisório artisticamente. O inventário do portal registra itens entregues em compras e recompensas confirmadas, na mesma transação. Comprovantes antigos não viram posse automaticamente; regras mecânicas externas do Hub continuam fora do portal. Não há chatbot, resposta automática de NPC, geração de imagens por IA, envio ao Discord, MFA ou recuperação automática de senha. A tabela legada `publications` não é o editor de notícias: os editores atuais possuem domínios e filas próprios. Deploy, domínio e merge não são executados por esta entrega.
 
 O [planejamento inicial](docs/OFICINA_GERAL_PLANO.md) fica preservado como inventário histórico. O [backlog](docs/BACKLOG_OFICINAS.md) e a [matriz final](docs/F5_2_ENTREGA.md) registram a conclusão do escopo autorizado.
 

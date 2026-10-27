@@ -203,3 +203,14 @@ html[data-house='master']{--surface:#26211f;--night2:#201b19}
 .modal,.reveal-dialog,.action-confirm{border-color:var(--house-edge);background:linear-gradient(145deg,var(--surface,#282021),var(--night2))}.npc-master-proof .npc-portrait{width:100%;max-height:160px;object-fit:contain;margin-bottom:16px}.npc-master-proof .npc-ornament{min-height:90px;margin-bottom:16px}
 
 .office-record-results{margin:24px 0}.office-record-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}.office-record-grid .btn{display:inline-flex;align-items:center;margin-top:18px}.newspaper-page>.workshop-title{border-top:4px double var(--house-edge);border-bottom:4px double var(--house-edge);padding:24px 0}.newspaper-page>.workshop-title .display{font-variant:small-caps;letter-spacing:.04em}.newspaper-page .content-record{border-width:2px;border-style:double}@media(max-width:650px){.office-record-grid{grid-template-columns:1fr}}
+
+/* Keep the existing parchment palette and typography in the compact newsroom. */
+.newspaper-compose>.eyebrow{border-block:3px double var(--line);padding:14px 0;text-align:center;letter-spacing:.18em}.newspaper-compose textarea[name=news]{min-height:200px}.newspaper-compose .group{align-items:flex-start}.quick-create select{max-width:100%}
+
+.master-section{margin:20px 0;padding:18px}.master-section>summary{font:1.25rem Georgia,serif;cursor:pointer;min-height:44px}.master-immediate{margin:24px 0}.letter-envelope{border:1px solid var(--line);border-left:5px solid var(--gold);background:linear-gradient(135deg,transparent 85%,#aa895133 85%)}.diary-seal{padding:28px;border:3px double var(--gold);text-align:center}.diary-seal>span{font-size:3rem;color:var(--gold)}.visual-map-editor,.visual-crop-editor{position:relative;max-width:720px;touch-action:none;margin:16px 0}.visual-map-editor>img,.visual-crop-editor>img{display:block;width:100%;max-height:none}.map-editor-pin{position:absolute;transform:translate(-50%,-50%);border:2px solid var(--gold);border-radius:50%;width:44px;height:44px;background:#211d18;color:#ffdf98;cursor:grab}.crop-selection{position:absolute;border:2px dashed #ffe3a0;background:#c7a55233;pointer-events:none}.option-search{margin-block:8px;max-width:100%}[hidden]{display:none!important}.master-section .dual{min-width:0}@media(max-width:650px){.master-immediate>.btn{flex:1 1 40%;white-space:normal}.master-section{padding:14px}.quick-create .field{min-width:0}.visual-map-editor{width:100%}}
+
+.crop-selection:focus-visible{outline:3px solid #fff}.crop-selection{pointer-events:auto}.visual-crop-editor .source-preview{margin:0}
+
+.dual>details.card{padding:20px}.dual>details.card>summary{cursor:pointer;min-height:44px}
+
+.office-star{width:46px;height:46px;min-width:46px;min-height:46px}.office-area>summary{min-height:46px}

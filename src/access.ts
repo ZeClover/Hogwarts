@@ -58,7 +58,7 @@ export async function mediaVisible(db: DB, viewer: Viewer, media: Row) {
 }
 async function portalNews(db: DB, viewer: Viewer, currentYear: string) {
     const news = (await filterAsync(await all(db, "SELECT * FROM publications WHERE status='PUBLISHED' ORDER BY published_at DESC"), r => publicationVisible(db, viewer, r))).map(r => ({ id: String(r.id), title: String(r.title), kind: String(r.kind), href: '/portal/publicacao/' + r.id, order: Number(r.published_at) }));
-    for (const r of await all(db, "SELECT r.*,COALESCE(pub.created_at,r.created_at) AS publication_order FROM content_records r LEFT JOIN content_revisions pub ON pub.record_id=r.id AND pub.version=r.published_revision WHERE kind IN ('newspapers','events','notices') AND status='PUBLISHED' ORDER BY publication_order DESC,r.id")) {
+    for (const r of await all(db, "SELECT r.*,COALESCE(pub.created_at,r.created_at) AS publication_order FROM content_records r LEFT JOIN content_revisions pub ON pub.record_id=r.id AND pub.version=r.published_revision WHERE kind IN ('newspapers','notices') AND status='PUBLISHED' ORDER BY publication_order DESC,r.id")) {
         if (!await contentAllowed(db, viewer, r)) continue;
         const p = contentPayload(r);
         if (r.kind === 'events' && p.academicYear !== currentYear) continue;

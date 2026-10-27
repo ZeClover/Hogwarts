@@ -1,14 +1,14 @@
 import { openCloudDatabase } from './cloud-db.ts';
 import { localDatabase } from './async-db.ts';
-import { backup } from 'node:sqlite';
+import { backup, DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, cpSync, existsSync } from 'node:fs';
+import { mkdirSync, cpSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { configuration } from './config.ts';
 import { openDatabase, one, transaction, audit } from './db.ts';
 import { token, digest, email, now } from './auth.ts';
 const config = configuration();
-const rawDb = config.databaseMode==='turso'?await openCloudDatabase(config,process.argv[2]==='migrate'):openDatabase(config);
+const rawDb = config.databaseMode==='turso'?await openCloudDatabase(config,process.argv[2]==='migrate'):process.argv[2]==='backup'?new DatabaseSync(join(config.dataDir,'hogwarts.sqlite'),{readOnly:true}):openDatabase(config);
 const db = 'asynchronous' in rawDb?rawDb:localDatabase(rawDb);
 try {
     const command = process.argv[2];
@@ -30,6 +30,7 @@ try {
         if('asynchronous' in rawDb)throw new Error('Use o backup cifrado no Painel do Mestre para o banco remoto.');
         const directory = resolve(process.argv[3] ?? `backups/${new Date().toISOString().replace(/[:.]/g, '-')}`);
         // Requests must be stopped so the DB and private media form one consistent snapshot.
+        if(existsSync(directory)&&readdirSync(directory).length)throw new Error('O destino já contém arquivos. Escolha um diretório novo para preservar as cópias anteriores.');
         mkdirSync(directory, { recursive: true, mode: 0o700 });
         await backup(rawDb, join(directory, 'hogwarts.sqlite'));
         cpSync(join(config.dataDir, 'media'), join(directory, 'media'), { recursive: true });

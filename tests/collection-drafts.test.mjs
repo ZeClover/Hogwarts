@@ -12,7 +12,7 @@ test('cinco acervos e pool nascem mínimos, privados e sem descoberta, cópia, p
   for(const k of ['chocolatecards','bestiary','rarities','memories','curiosities','chocolatepools']){
    const r=await create(f,k,'REGISTRO SECRETO '+k);assert.equal(r.status,'DRAFT');assert.equal((await f.atlas.request('/api/content/'+k+'/'+r.id)).status,404);
    assert.equal((await f.atlas.request('/api/content/'+k+'?q=SECRETO')).value.total,0);
-   if(['chocolatecards','rarities','chocolatepools'].includes(k))assert.equal((await publish(f,k,r)).status,422);
+   if(k==='chocolatepools')assert.equal((await publish(f,k,r)).status,422);
    else {assert.equal((await publish(f,k,r)).status,200);assert.equal((await f.atlas.request('/api/content/'+k+'/'+r.id)).status,404);}
   }
   for(const table of ['collection_discoveries','chocolate_copies','chocolate_packets','delivery_events'])assert.equal(f.db.prepare('SELECT count(*) n FROM '+table).get().n,0);

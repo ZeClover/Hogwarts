@@ -1,3 +1,4 @@
+import {giveItem} from './possessions.ts';
 import { mapAsync } from './async-array.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -44,7 +45,7 @@ registerReward('MONEY', { validate: (_db, p) => {
             fail(422, 'Informe uma recompensa monetária positiva.');
     }, apply: async (db, actor, p, char, commandKey) => { await postWallet(db, actor, char, p.nuques, 'REWARD', p.title, 'Recompensa confirmada pelo Mestre', 'reward:' + commandKey); return { kind: 'MONEY', title: p.title, text: p.text, nuques: p.nuques }; } });
 const order = async (db: DB, id: string) => await one(db, 'SELECT * FROM purchase_orders WHERE id=?', id) ?? fail(404, 'Pedido não encontrado.');
-function publicOrder(row: Row) { const receipt = row.receipt_json ? JSON.parse(String(row.receipt_json)) : null; return { id: row.id, status: row.status, version: row.version, quantity: row.quantity, requested: JSON.parse(String(row.requested_json)), receipt: receipt ? { ...receipt, image: row.image_file_id ? '/api/commerce/orders/' + row.id + '/image' : null } : null }; }
+function publicOrder(row: Row) { const receipt = row.receipt_json ? JSON.parse(String(row.receipt_json)) : null; return { id: row.id, status: row.status, version: row.version, quantity: row.quantity, negotiation: row.negotiation ?? '', requested: JSON.parse(String(row.requested_json)), receipt: receipt ? { ...receipt, image: row.image_file_id ? '/api/commerce/orders/' + row.id + '/image' : null } : null }; }
 async function adminOrder(db: DB, row: Row) { const offer = await contentRecord(db, 'offers', String(row.offer_id)), p = contentPayload(offer, !!offer.published_json), stock = await one(db, 'SELECT remaining FROM offer_stock WHERE offer_id=?', String(offer.id)); return { ...publicOrder(row), characterId: row.character_id, offerId: row.offer_id, privateReason: row.private_reason, referencePriceNuques: p.priceNuques, stock: stock?.remaining ?? null, balance: await balance(db, String(row.character_id)) }; }
 async function requestOrder(db: DB, actor: Session, viewer: Viewer, data: Record<string, unknown>) {
     fields(data, ['offerId', 'quantity', 'requestKey']);
@@ -99,6 +100,7 @@ async function approve(db: DB, actor: Session, id: string, data: Record<string, 
             await postWallet(db, actor, String(row.character_id), -paid, 'PURCHASE', it.title, 'Compra aprovada pelo Mestre', 'order:' + id);
         if (stock?.remaining !== null && stock?.remaining !== undefined)
             await db.prepare('UPDATE offer_stock SET remaining=remaining-? WHERE offer_id=?').run(Number(row.quantity), String(offer.id));
+        await giveItem(db,actor.userId,String(row.character_id),String(p.itemId),Number(row.quantity),'order:'+id,{title:it.title,description:it.description});
         const receipt = { title: it.title, description: it.description, quantity: row.quantity, paidNuques: paid };
         await db.prepare("UPDATE purchase_orders SET status='APPROVED',version=version+1,receipt_json=?,image_file_id=?,image_crop_json=?,actor_id=? WHERE id=?").run(JSON.stringify(receipt), raw.fileId, JSON.stringify(raw.crop), actor.userId, id);
         await audit(db, actor.userId, 'PURCHASE_APPROVED', 'ORDER', id, { paidNuques: paid, quantity: row.quantity });
@@ -140,13 +142,19 @@ export async function handleCommerce(req: IncomingMessage, res: ServerResponse, 
             fields(data, ['characterId', 'amount', 'title', 'reason', 'commandKey', 'confirm']);
             if (data.confirm !== true)
                 fail(422, 'Confirme o lançamento.');
-            const char = text(data.characterId, 100), delta = amount(data.amount, true), title = text(data.title, 180), reason = text(data.reason, 2000), commandKey = 'manual:' + char + ':' + key(data.commandKey);
+            const char = text(data.characterId, 100), delta = amount(data.amount, true), title = text(data.title ?? 'Ajuste da carteira', 180), reason = text(data.reason ?? '', 2000, false), commandKey = 'manual:' + char + ':' + key(data.commandKey);
             const id = await transaction(db, async () => await postWallet(db, actor, char, delta, 'ADJUSTMENT', title, reason, commandKey));
             send(res, 200, { id, balance: await balance(db, char) });
             return true;
         }
-        const match = path.match(/^\/api\/master\/commerce\/orders\/([\w-]+)\/(approve|reject)$/);
+        const match = path.match(/^\/api\/master\/commerce\/orders\/([\w-]+)\/(approve|reject|negotiate)$/);
         if (match && method === 'POST') {
+            if(match[2]==='negotiate') {
+                const data=await jsonBody(req);fields(data,['version','message']);const message=text(data.message,2000);
+                await transaction(db,async()=>{const row=await order(db,match[1]!);expected(row,data.version);if(row.status!=='PENDING')fail(409,'O pedido já foi resolvido.');await db.prepare('UPDATE purchase_orders SET negotiation=?,version=version+1 WHERE id=?').run(message,match[1]!);await audit(db,actor.userId,'PURCHASE_NEGOTIATED','ORDER',match[1]!);});
+                send(res,200,await adminOrder(db,await order(db,match[1]!)));return true;
+            }
+
             send(res, 200, match[2] === 'approve' ? await approve(db, actor, match[1]!, await jsonBody(req)) : await closeOrder(db, actor, match[1]!, await jsonBody(req)));
             return true;
         }

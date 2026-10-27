@@ -62,7 +62,7 @@ test('novidades usa snapshots publicados e autorização real, sem missões não
   let q=(await f.master.request('/api/master/campaign/quests',{method:'POST',body:qbody})).value;q=(await f.master.request('/api/master/campaign/quests/'+q.id+'/publish',{method:'POST',body:{version:q.version}})).value;
   for(const c of [f.atlas,f.eiris])assert.ok(!(await c.request('/api/state')).value.news.some(n=>n.id===q.id));
   q=(await f.master.request('/api/master/campaign/quests/'+q.id+'/release',{method:'POST',body:{version:q.version,characters:['atlas']}})).value;
-  let news=(await f.atlas.request('/api/state')).value.news;for(const r of [paper,event,notice,q])assert.ok(news.some(n=>n.id===r.id));assert.ok(!JSON.stringify(news).includes('MODELO OCULTO'));
+  let news=(await f.atlas.request('/api/state')).value.news;for(const r of [paper,notice,q])assert.ok(news.some(n=>n.id===r.id));assert.ok(!news.some(n=>n.id===event.id));assert.ok(!JSON.stringify(news).includes('MODELO OCULTO'));
   assert.ok(!(await f.eiris.request('/api/state')).value.news.some(n=>n.id===q.id));
   assert.deepEqual(Object.keys(news[0]).sort(),['href','id','kind','title']);
   f.db.prepare('UPDATE content_records SET updated_at=1 WHERE id=?').run(paper.id);f.db.prepare('UPDATE content_revisions SET created_at=1 WHERE record_id=? AND version=?').run(paper.id,paper.publishedRevision);

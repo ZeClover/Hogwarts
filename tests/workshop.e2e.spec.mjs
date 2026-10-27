@@ -1,3 +1,4 @@
+import {openDisclosure} from './browser-helpers.mjs';
 import {openPolicy} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -31,8 +32,8 @@ test('Oficina Geral cria mídia, recorta, confere prévia e publica só para o p
   await page.getByLabel('Descrição visível',{exact:true}).fill('Descrição pública escrita pelo Mestre.');
   await page.getByLabel('Ou selecionar uma imagem aprovada',{exact:true}).selectOption('loja_dedosdemel.webp');
   await page.getByLabel('Texto alternativo',{exact:true}).fill('Imagem de ambiente da Dedosdemel');
-  await page.getByText('Corte, apresentação e notas',{exact:true}).click();
-  await page.getByLabel('Largura (%)',{exact:true}).fill('80');
+  await openDisclosure(page,'Corte, apresentação e notas');
+  const crop=page.getByRole('button',{name:'Ajustar recorte: setas movem, Shift e setas redimensionam',exact:true});await crop.focus();for(let i=0;i<20;i++)await page.keyboard.press('Shift+ArrowLeft');await expect(page.locator('[name=cropWidth]')).toHaveValue('80.0');
   await page.getByLabel('Notas privadas do Mestre',{exact:true}).fill('SEGREDO NÃO ENVIAR <img src=x onerror=alert(1)>');
   await openPolicy(page);await page.locator('[name="characters"][value="atlas"]').check();
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
@@ -80,7 +81,7 @@ test('upload em celular, turma, exclusões, duplicação e conflito entre editor
   await page.goto(f.config.origin+base+'/midias/nova');await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();
   await page.getByLabel('Nome',{exact:true}).fill('UPLOAD REAL');await page.getByLabel('Texto alternativo',{exact:true}).fill('Brasão de Hogwarts enviado');
   await page.getByLabel('Enviar uma imagem',{exact:true}).setInputFiles('public/assets/hogwarts.webp');
-  await openPolicy(page);await page.getByLabel('Público',{exact:true}).selectOption('ALL');await page.getByText('Restrições e exceções',{exact:true}).click();
+  await openPolicy(page);await page.getByLabel('Público',{exact:true}).selectOption('ALL');await openDisclosure(page,'Restrições e exceções');
   await page.getByRole('checkbox',{name:'Turma criada no navegador',exact:true}).check();
   await page.locator('[name="excludedCharacters"][value="eiris"]').check();
   await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await expect(page.getByRole('heading',{name:'Editar imagem',exact:true})).toBeVisible();

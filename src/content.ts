@@ -89,7 +89,7 @@ async function validateFields(db: DB, value: unknown, definitions: Field[], dept
             output = value;
         }
         else if (type === 'number') {
-            if (value === null && !required)
+            if ((value === null || value === undefined) && !required)
                 output = null;
             else if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < (f.min ?? 0) || value > (f.max ?? 1e12))
                 fail(400, `Confira ${f.label}.`);
@@ -121,7 +121,7 @@ async function validateFields(db: DB, value: unknown, definitions: Field[], dept
                 fail(400, `Confira ${f.label}.`);
         }
         else
-            output = text(value, f.max ?? (type === 'textarea' ? 8000 : 180), required);
+            output = text(value ?? '', f.max ?? (type === 'textarea' ? 8000 : 180), required);
         return [f.name, output];
     }));
 }
@@ -151,7 +151,17 @@ export async function validateContent(db: DB, kind: string, data: Record<string,
     return { p, policy, notes: text(data.privateNotes, 8000, false) };
 }
 export async function contentRevision(db: DB, row: Row, actor: Session, action: string) { await db.prepare('INSERT INTO content_revisions(record_id,version,actor_id,action,snapshot_json) VALUES(?,?,?,?,?)').run(String(row.id), Number(row.version), actor.userId, action, JSON.stringify(row)); await audit(db, actor.userId, 'CONTENT_' + action, String(row.kind), String(row.id), { version: row.version }); }
-async function create(db: DB, actor: Session, kind: string, data: Record<string, unknown>) { fields(data, ['payload', 'policy', 'privateNotes']); const { p, policy, notes } = await validateContent(db, kind, data), template = kindFamilies[kind] ? await templateSnapshot(db, p.templateId, kindFamilies[kind]!) : null, id = randomUUID(); return await transaction(db, async () => { await db.prepare('INSERT INTO content_records(id,kind,owner_user_id,draft_json,draft_policy_json,private_notes,draft_template_json) VALUES(?,?,?,?,?,?,?)').run(id, kind, actor.userId, JSON.stringify(p), JSON.stringify(policy), notes, template ? JSON.stringify(template) : null); const row = await contentRecord(db, kind, id); await contentRevision(db, row, actor, 'CREATED'); return await contentAdmin(db, row); }); }
+// Called inside the write transaction: concurrent drafts cannot allocate the same number.
+async function assignNewspaperNumber(db: DB, kind: string, p: ContentPayload) {
+    if (kind !== 'newspapers' || !p.headline || p.number) return;
+    const existing = await all(db, "SELECT draft_json FROM content_records WHERE kind='newspapers'");
+    const highest = existing.reduce((max, row) => {
+        const number = String(JSON.parse(String(row.draft_json)).number ?? '');
+        return /^\d{1,9}$/.test(number) ? Math.max(max, Number(number)) : max;
+    }, 0);
+    p.number = String(highest + 1);
+}
+async function create(db: DB, actor: Session, kind: string, data: Record<string, unknown>) { fields(data, ['payload', 'policy', 'privateNotes']); const { p, policy, notes } = await validateContent(db, kind, data), template = kindFamilies[kind] ? await templateSnapshot(db, p.templateId, kindFamilies[kind]!) : null, id = randomUUID(); return await transaction(db, async () => { await assignNewspaperNumber(db, kind, p); await db.prepare('INSERT INTO content_records(id,kind,owner_user_id,draft_json,draft_policy_json,private_notes,draft_template_json) VALUES(?,?,?,?,?,?,?)').run(id, kind, actor.userId, JSON.stringify(p), JSON.stringify(policy), notes, template ? JSON.stringify(template) : null); const row = await contentRecord(db, kind, id); await contentRevision(db, row, actor, 'CREATED'); return await contentAdmin(db, row); }); }
 async function save(db: DB, actor: Session, kind: string, id: string, data: Record<string, unknown>) {
     fields(data, ['version', 'payload', 'policy', 'privateNotes']);
     return await transaction(db, async () => {
@@ -160,6 +170,7 @@ async function save(db: DB, actor: Session, kind: string, id: string, data: Reco
         if (before.status === 'ARCHIVED')
             fail(409, 'Restaure antes de editar.');
         const { p, policy, notes } = await validateContent(db, kind, data), template = kindFamilies[kind] ? await templateSnapshot(db, p.templateId, kindFamilies[kind]!) : null;
+        await assignNewspaperNumber(db, kind, p);
         await db.prepare("UPDATE content_records SET draft_json=?,draft_policy_json=?,private_notes=?,draft_template_json=?,version=version+1,updated_at=?,status=CASE WHEN status='PREPARED' THEN 'DRAFT' ELSE status END WHERE id=?").run(JSON.stringify(p), JSON.stringify(policy), notes, template ? JSON.stringify(template) : null, now(), id);
         const row = await contentRecord(db, kind, id);
         await contentRevision(db, row, actor, 'SAVED');
