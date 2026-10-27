@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
@@ -9,7 +10,7 @@ test.beforeAll(async()=>{f=await fixture();const context=(await f.master.request
  await publish('events',{title:'Encontro de observação',description:'Evento publicado de teste.',narrativeDate:'Primeira noite do ano'});
  await publish('timetables',{title:'Grade publicada',slots:[{id:null,day:'Segunda-feira',time:'20h',subject:'Astronomia',npcId:null,locationId:null,lessonId:null},{id:null,day:'Terça-feira',time:'10h',subject:'Poções',npcId:null,locationId:null,lessonId:null}]});
 });test.afterAll(async()=>{await f?.close();});
-async function login(page,email){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 test('Salão mostra somente murais autorizados da Casa, aviso real e retorno ao local',async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page,'eiris@test.invalid');await page.goto(f.config.origin+'/portal/sala-comunal');await page.getByRole('link',{name:/^MURAL SÓ DA LUFA-LUFA/}).click();await expect(page.locator('main')).toContainText('Texto aprovado pelo Mestre nesta fixture.');await expect(page.getByRole('navigation',{name:'Caminho da página'})).toContainText('Explorar › Hogwarts › Murais');await expect(page.getByRole('button',{name:'Voltar ao local do mural',exact:true})).toBeVisible();await page.getByRole('button',{name:'Salão Comunal',exact:true}).click();await expect(page.getByRole('heading',{name:'Salão Comunal',exact:true})).toBeVisible();
  expect(JSON.stringify((await f.atlas.request('/api/content/boards')).value)).not.toContain(board.id);expect((await f.atlas.request('/api/content/boards/'+board.id)).status).toBe(404);await settleAnimations(page);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);await page.screenshot({path:'/tmp/restauracao-room-mobile.png',fullPage:true});

@@ -1,0 +1,22 @@
+{
+  "sqlite": {
+    "passed": 210,
+    "failed": 0,
+    "skipped": 0
+  },
+  "libsql_local": {
+    "passed": 210,
+    "failed": 0,
+    "skipped": 0
+  },
+  "playwright": {
+    "passed": 79,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": "passed",
+  "lint": "passed",
+  "baseline": "9c4fee076d1e97df101baf9d133a8a5e773b1b10",
+  "branch": "feat/imagens-descobertas-senhas",
+  "screenshots_historical_restored": 53
+}

@@ -1,9 +1,10 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
 import {settleAnimations} from './browser-helpers.mjs';
 let f;test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 test('NPC publicado só no acervo do Mestre não vaza; liberar personagem exige salvar e confirmar público exato',async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page);await page.goto(f.config.origin+'/portal/mestre/oficinas/npcs/novo');await page.getByLabel('Nome público',{exact:true}).fill('PERFIL PRIVADO DE REVISÃO');await page.getByLabel('Descrição curta (opcional)',{exact:true}).fill('Descrição escolhida na fixture.');await page.getByLabel('Foto (opcional)',{exact:true}).setInputFiles('public/assets/hogwarts.webp');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await expect(page.getByRole('heading',{name:'Editar NPC',exact:true})).toBeVisible();const id=new URL(page.url()).pathname.split('/').pop();
  await page.getByRole('button',{name:'Publicar perfil',exact:true}).click();await expect(page.locator('#npc-confirm')).toContainText('Publicar apenas no meu acervo');await expect(page.locator('#npc-confirm')).toContainText('Somente o Mestre');await page.getByRole('button',{name:'Confirmar publicação',exact:true}).click();await expect(page.getByRole('button',{name:'Atualizar perfil publicado',exact:true})).toBeVisible();

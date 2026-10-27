@@ -1,3 +1,5 @@
+import {magicPaths,magicIcon,routeIcon} from '/magic-icons.js';
+import {createImageGallery} from '/image-gallery.js';
 import {enhanceSimplicity,attachSimplicity} from '/simplicity.js';
 import {createCreations} from '/creations.js';
 import {attachImageFallback,enhanceExperience,organizeItemFields} from '/experience.js';
@@ -34,6 +36,7 @@ attachQuickCreate(root,{api,state,navigate,render,toast});
 attachEditorTabs(root);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iconPaths = {
+ ...magicPaths,
  castle:'M3 21h18M5 21V7l3 2V4l4-2 4 2v5l3-2v14M9 21v-6h6v6M11 8h2M11 11h2',
  map:'m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15',
  book:'M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15',
@@ -52,7 +55,7 @@ const iconPaths = {
 const ico = (name, size=20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[name] ?? iconPaths.star}"/></svg>`;
 const label = (left, right=state.portal?.calendar?.academicYearLabel??'1890–1891') => `<div class="subtop"><span class="eyebrow">${esc(left)}</span><span class="breadcrumbs">${esc(right)}</span></div>`;
 const empty = message => `<div class="vacant slim">${ico('star',30)}<span>${esc(message)}</span></div>`;
-const button = (title, page, icon='arrow', extra='') => `<button class="btn ghost ${extra}" data-go="${page}">${ico(icon,16)} ${esc(title)}</button>`;
+const button = (title, page, icon='arrow', extra='') => `<button class="btn ghost ${extra}" data-go="${page}">${magicIcon(routeIcon(page,icon),18)} ${esc(title)}</button>`;
 const playerPages=createPlayerPages({state,esc,ico,label,empty,button,pathWithView,render,api});
 playerPages.attach(root);
 const creations=createCreations({api,state,esc,label,empty,button,render});
@@ -87,6 +90,7 @@ const investigationsOffice=createInvestigationsOffice({api,esc,label,empty,butto
 investigationsOffice.attach(root);
 const archivesOffice=createArchivesOffice({api,esc,label,empty,button,state,render,toast});
 archivesOffice.attach(root);
+const imageGallery=createImageGallery({api,state,esc,toast});
 const delivery=createDelivery({api,state,refresh,navigate,esc});
 function toast(message, error=false) {
   clearTimeout(toastTimer);
@@ -99,6 +103,7 @@ async function api(path, {method='GET', body, preview=true, raw=false}={}) {
   const headers={};
   if(method!=='GET' && state.session) headers['X-CSRF-Token']=state.session.csrf;
   if(body!==undefined) headers['Content-Type']=raw?body.type:'application/json';
+  if(raw&&body instanceof window.File)headers['X-Upload-Name']=encodeURIComponent(body.name);
   const response=await fetch(url,{method,headers,credentials:'same-origin',body:body===undefined?undefined:raw?body:JSON.stringify(body)});
   const value=await response.json();
   if(!response.ok){
@@ -173,7 +178,7 @@ function authPage() {
   const canonical=new URL(activate?'/ativar':'/entrar',state.authOrigin??location.origin);
   if(activate)canonical.hash=location.hash;
   const accessNotice=!state.authOrigin?`<p role="status">Não foi possível conferir o endereço de acesso. Recarregue a página para tentar novamente.</p><a class="btn" href="${esc(activate?'/ativar'+location.hash:'/entrar')}">Tentar novamente</a>`:state.authOrigin!==location.origin?`<div class="auth-origin-note" role="status"><p>Este é um endereço temporário. Use o endereço principal para entrar na sua conta.</p><a class="btn" href="${esc(canonical.href)}" rel="noreferrer">Continuar no endereço principal</a></div>`:'';
-  return `<main id="main" class="auth-shell" tabindex="-1"><section class="auth-art" aria-label="Castelo de Hogwarts à noite"><div class="auth-wordmark"><img src="/assets/hogwarts.webp" alt="Brasão de Hogwarts"><span>Hogwarts <small>ARQUIVOS MÁGICOS</small></span></div><div class="auth-story"><span class="eyebrow">ESCOLA DE MAGIA E BRUXARIA</span><h1>Há histórias que<br>pertencem a poucos.</h1><div class="gold-rule"></div><p>As suas esperam por você.</p><span class="auth-year">ANO LETIVO 1890–1891</span></div></section><section class="auth-form-panel"><div class="auth-form-inner"><span class="eyebrow">${activate?'UMA NOVA HISTÓRIA':'BEM-VINDO DE VOLTA'}</span><h2>${activate?'Seu lugar em Hogwarts':'Os arquivos aguardam'}</h2><p class="muted">${activate?'Use o e-mail do seu convite para criar sua conta.':'Entre para continuar a sua história.'}</p>${accessNotice||`<form data-form="${activate?'activate':'login'}"><label class="field">E-mail<input type="email" name="email" autocomplete="username" required maxlength="254" placeholder="Seu e-mail"></label><label class="field">${activate?'Crie uma senha':'Senha'}<input type="password" name="password" autocomplete="${activate?'new-password':'current-password'}" minlength="12" maxlength="128" required placeholder="${activate?'Pelo menos 12 caracteres':'Sua senha'}"></label>${activate?'<p class="subtle">Seu convite é pessoal e pode ser utilizado uma única vez.</p>':''}<p class="form-error" role="alert"></p><button class="btn auth-submit" type="submit">${activate?'Aceitar convite':'Entrar nos arquivos'} ${ico('arrow',18)}</button></form>`}<div class="auth-note">${ico('lock',16)} Acesso privado por convite do Mestre.</div>${activate?'<a class="auth-link" href="/entrar">Já tem uma conta? Entrar</a>':''}<p class="auth-help">${activate?'O convite expirou? Peça um novo ao Mestre.':'Para acessar pela primeira vez ou recuperar seu acesso, fale com o Mestre.'}</p></div><span class="auth-bottom">HOGWARTS · 1890</span></section></main>`;
+  return `<main id="main" class="auth-shell" tabindex="-1"><section class="auth-art" aria-label="Castelo de Hogwarts à noite"><div class="auth-wordmark"><img src="/assets/hogwarts.webp" alt="Brasão de Hogwarts"><span>Hogwarts <small>ARQUIVOS MÁGICOS</small></span></div><div class="auth-story"><span class="eyebrow">ESCOLA DE MAGIA E BRUXARIA</span><h1>Há histórias que<br>pertencem a poucos.</h1><div class="gold-rule"></div><p>As suas esperam por você.</p><span class="auth-year">ANO LETIVO 1890–1891</span></div></section><section class="auth-form-panel"><div class="auth-form-inner"><span class="eyebrow">${activate?'UMA NOVA HISTÓRIA':'BEM-VINDO DE VOLTA'}</span><h2>${activate?'Seu lugar em Hogwarts':'Os arquivos aguardam'}</h2><p class="muted">${activate?'Use o e-mail do seu convite para criar sua conta.':'Entre para continuar a sua história.'}</p>${accessNotice||`<form data-form="${activate?'activate':'login'}"><label class="field">E-mail<input type="email" name="email" autocomplete="username" required maxlength="254" placeholder="Seu e-mail"></label><label class="field">${activate?'Crie uma senha':'Senha'}<input type="password" name="password" autocomplete="${activate?'new-password':'current-password'}" minlength="${activate?8:1}" maxlength="128" required placeholder="${activate?'Pelo menos 8 caracteres':'Sua senha'}"></label>${activate?'<p class="subtle">Seu convite é pessoal e pode ser utilizado uma única vez.</p>':''}<p class="form-error" role="alert"></p><button class="btn auth-submit" type="submit">${activate?'Aceitar convite':'Entrar nos arquivos'} ${ico('arrow',18)}</button></form>`}<div class="auth-note">${ico('lock',16)} Acesso privado por convite do Mestre.</div>${activate?'<a class="auth-link" href="/entrar">Já tem uma conta? Entrar</a>':''}<p class="auth-help">${activate?'O convite expirou? Peça um novo ao Mestre.':'Para acessar pela primeira vez ou recuperar seu acesso, fale com o Mestre.'}</p></div><span class="auth-bottom">HOGWARTS · 1890</span></section></main>`;
 }
 function header() {
   const p=state.portal.character, isMaster=state.session.role==='MASTER'&&!state.view;
@@ -284,6 +289,7 @@ function render() {
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
   root.innerHTML=`<div class="shell">${header()}<main id="main" class="page" tabindex="-1">${journeyTrail()}${pageContent()}<footer class="portal-footer"><span>HOGWARTS · ARQUIVOS MÁGICOS</span><span>${esc(state.portal.calendar.academicYearLabel)}</span></footer></main></div>`;
   enhanceExperience(root,state);
+  imageGallery.enhance(root);
   organizeItemFields(root);
   enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);

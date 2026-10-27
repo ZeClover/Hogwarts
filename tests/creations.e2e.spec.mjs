@@ -1,9 +1,10 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
 import {settleAnimations} from './browser-helpers.mjs';
 let f;test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page,email='master@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email='master@test.invalid'){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 test('Minhas Criações cria e retoma o mesmo NPC, side-quest, item, livro e aula, sem reset ou duplicação',async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page);await page.goto(f.config.origin+'/portal/mestre');await page.getByRole('button',{name:'Abrir Minhas Criações',exact:true}).click();await expect(page.getByRole('heading',{name:'Minhas Criações',exact:true})).toBeVisible();
  for(const [kind,newName,editTitle,inputName] of [['npcs','Novo NPC','Editar NPC','name'],['quests','Nova missão / Side-Quest','Editar missão','title'],['items','Novo item','Editar item','name'],['books','Novo livro','Editar Livro','payload.title'],['lessons','Nova aula','Editar Aula','payload.title']]){

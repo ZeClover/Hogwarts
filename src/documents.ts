@@ -1,3 +1,5 @@
+import { imageStamp } from './editorial.ts';
+import { enqueueOnce, registerEvent } from './events.ts';
 import {giveItem} from './possessions.ts';
 import { privateStorage } from './storage.ts';
 import { filterAsync, forEachAsync, mapAsync } from './async-array.ts';
@@ -238,6 +240,7 @@ async function grant(db: DB, actor: Session, id: string, data: Record<string, un
         for (const char of p.characters) {
             const id = randomUUID(), receipt = await handler.apply(db, actor, p, char, String(row.id) + ':' + char);
             await db.prepare('INSERT INTO reward_grants(id,plan_id,character_id,receipt_json,actor_id) VALUES(?,?,?,?,?)').run(id, String(row.id), char, JSON.stringify(receipt), actor.userId);
+            if (!['ITEM','COLLECTION','MEMORY'].includes(p.kind)) await enqueueOnce(db, char, 'REWARD_GRANTED', id);
         }
         await db.prepare('UPDATE reward_plans SET granted=1,version=version+1 WHERE id=?').run(id);
         await audit(db, actor.userId, 'REWARD_GRANTED', 'REWARD', id, { characters: p.characters });
@@ -377,3 +380,13 @@ export async function handleDocuments(req: IncomingMessage, res: ServerResponse,
     }
     fail(404, 'Recurso não encontrado.');
 }
+
+registerEvent('REWARD_GRANTED', async (db,v,e) => {
+    const r=await one(db,'SELECT * FROM reward_grants WHERE id=? AND character_id=?',String(e.resource_id),v.characterId);
+    if(!r)return null;
+    const receipt=JSON.parse(String(r.receipt_json));
+    const item=receipt.itemId?await one(db,"SELECT * FROM catalog_items WHERE id=? AND status='PUBLISHED'",String(receipt.itemId)):null;
+    const canImage=item&&await policyAllows(db,v,JSON.parse(String(item.published_policy_json)) as Policy);
+    const picture=canImage?JSON.parse(String(item.published_json)):null;
+    return {image:picture?.fileId?`/api/workshop/items/${item!.id}/image?stamp=${imageStamp(item!)}`:null,alt:String(picture?.alt??''),kind:'NOVA RECOMPENSA',title:String(receipt.title ?? receipt.name ?? 'Recompensa recebida'),text:'Uma recompensa foi entregue ao seu personagem.',href:'/portal/documentos'};
+});

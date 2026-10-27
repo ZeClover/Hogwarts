@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -6,7 +7,7 @@ import {fixture} from './helpers.mjs';
 const policy={audience:'ALL',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null};
 async function command(f,row,action,extra={}){const r=await f.master.request(`/api/master/content/${row.kind}/${row.id}/${action}`,{method:'POST',body:{version:row.version,...extra}});expect(r.status,JSON.stringify(r.value)).toBe(200);return r.value;}
 async function create(f,kind,payload){const r=await f.master.request('/api/master/content/'+kind,{method:'POST',body:{payload,policy,privateNotes:'NOTA INTERNA'}});expect(r.status,JSON.stringify(r.value)).toBe(201);return command(f,r.value,'publish');}
-async function login(page,f,email='atlas@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,f,email='atlas@test.invalid'){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 test('moldura só acompanha descobertas, retrato protegido e verso por teclado',async({page})=>{
  const f=await fixture();try{
   const file=(await f.master.request('/api/master/workshop/files',{method:'POST',body:{asset:'hogwarts_escadarias.webp'}})).value;

@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {openPolicy} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
@@ -8,7 +9,7 @@ let f;
 const base='/portal/mestre/oficinas';
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots/f2-0a',{recursive:true});});
 test.afterAll(async()=>{await f?.close();});
-async function login(page,email){
+async function login(page,email){await dismissIncidentalDiscoveries(page);
   await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);
   await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();
 }

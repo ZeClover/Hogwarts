@@ -12,7 +12,7 @@ import { fail, HttpError, requireMaster, requireSession, viewerFor, rateLimit, t
 import { bodyBuffer, jsonBody, send, text, fields, stringIds } from './http.ts';
 import { adminMedia, command, createEntry, editEntry, entry, expected, exists, draft, published, policy, policyAllows, publicMedia, imageStamp, categories, presentations, type MediaPayload } from './editorial.ts';
 async function approvedAssets(config: Config) { return (await readdir(join(config.publicDir, 'assets'))).filter(name => name.endsWith('.webp')).sort(); }
-function fileDTO(row: Row) { return { id: row.id, width: row.width, height: row.height, originalAlreadyPublic: !!row.origin_asset, image: `/api/master/workshop/files/${row.id}` }; }
+function fileDTO(row: Row) { return { name: String(row.display_name || row.origin_asset || `Imagem ${row.width} × ${row.height}`), id: row.id, width: row.width, height: row.height, originalAlreadyPublic: !!row.origin_asset, image: `/api/master/workshop/files/${row.id}` }; }
 function imageMime(bytes: Buffer) {
     if (bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255])))
         return 'image/jpeg';
@@ -22,7 +22,12 @@ function imageMime(bytes: Buffer) {
         return 'image/webp';
     return null;
 }
-async function storeImage(db: DB, config: Config, actor: Session, bytes: Buffer, source: string | null) {
+function uploadName(req: IncomingMessage) {
+    const raw=req.headers['x-upload-name'];
+    if(typeof raw!=='string')return '';
+    try{return Array.from(decodeURIComponent(raw)).map(c=>c.charCodeAt(0)<32||c==='/'||c==='\\'?' ':c).join('').trim().slice(0,180);}catch{return '';}
+}
+async function storeImage(db: DB, config: Config, actor: Session, bytes: Buffer, source: string | null, displayName = '') {
     let output: Buffer;
     try {
         const decoder = sharp(bytes, { limitInputPixels: 16000000, animated: false, failOn: 'warning' }), meta = await decoder.metadata();
@@ -39,8 +44,8 @@ async function storeImage(db: DB, config: Config, actor: Session, bytes: Buffer,
     await privateStorage(config).write(key,output);
     try {
         await transaction(db, async () => {
-            await db.prepare('INSERT INTO workshop_files(id,owner_user_id,storage_key,mime,bytes,width,height,origin_asset) VALUES(?,?,?,?,?,?,?,?)')
-                .run(id, actor.userId, key, 'image/webp', output.length, meta.width!, meta.height!, source);
+            await db.prepare('INSERT INTO workshop_files(id,owner_user_id,storage_key,mime,bytes,width,height,origin_asset,display_name) VALUES(?,?,?,?,?,?,?,?,?)')
+                .run(id, actor.userId, key, 'image/webp', output.length, meta.width!, meta.height!, source, displayName.slice(0,180));
             await audit(db, actor.userId, 'WORKSHOP_FILE_UPLOADED', 'MEDIA_FILE', id);
         });
     }
@@ -102,6 +107,24 @@ export async function handleWorkshop(req: IncomingMessage, res: ServerResponse, 
                 files: (await all(db, 'SELECT * FROM workshop_files ORDER BY created_at DESC,id')).map(fileDTO) });
             return true;
         }
+        if (path === '/api/master/workshop/gallery' && method === 'GET') {
+            const names = new Map<string,string>();
+            const visit = (p: unknown, title = '') => {
+                if (!p || typeof p !== 'object') return;
+                const value = p as Record<string,unknown>;
+                const name = String(value.title || value.name || title);
+                for (const [key, item] of Object.entries(value)) {
+                    if ((key === 'fileId' || key === 'portraitFileId') && typeof item === 'string' && name) names.set(item,name);
+                    else if (typeof item === 'object') visit(item,name);
+                }
+            };
+            for (const table of ['editorial_entries','content_records','npcs','catalog_items','quests'])
+                for (const row of await all(db, `SELECT draft_json FROM ${table}`)) visit(JSON.parse(String(row.draft_json)));
+            const files=(await all(db,'SELECT * FROM workshop_files ORDER BY created_at DESC,id')).map(r=>({...fileDTO(r),name:String(r.display_name || names.get(String(r.id)) || r.origin_asset || `Imagem ${r.width} × ${r.height}`),category:'uploads'}));
+            const assets=(await approvedAssets(config)).map(asset=>({id:null,asset,name:asset.replaceAll('_',' ').replace('.webp',''),image:'/assets/'+asset,category:'project'}));
+            send(res,200,{items:[...files,...assets]});
+            return true;
+        }
         if (path === '/api/master/workshop/files' && method === 'POST') {
             await rateLimit(db, `library-upload:${actor.userId}`, 60);
             let buffer: Buffer, source: string | null = null;
@@ -119,7 +142,7 @@ export async function handleWorkshop(req: IncomingMessage, res: ServerResponse, 
                 if (!mime || mime !== req.headers['content-type'])
                     fail(415, 'O conteúdo precisa corresponder a uma imagem JPG, PNG ou WebP.');
             }
-            send(res, 201, await storeImage(db, config, actor, buffer, source));
+            send(res, 201, await storeImage(db, config, actor, buffer, source, source ?? uploadName(req)));
             return true;
         }
         const file = path.match(/^\/api\/master\/workshop\/files\/([\w-]+)$/);

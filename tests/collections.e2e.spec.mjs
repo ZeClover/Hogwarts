@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -7,7 +8,7 @@ let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots/f4-0a',{recursive:true});});
 test.afterAll(async()=>{await f?.close();});
-async function login(page,email){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 async function confirm(page){await page.getByRole('button',{name:'Confirmar ação',exact:true}).click();await expect(page.getByRole('button',{name:'Confirmar ação',exact:true})).toHaveCount(0);}
 test('encontro, descoberta, camada e nota pessoal têm comandos distintos e destinatários reais',async({page,browser})=>{
  await login(page,'master@test.invalid');await page.goto(f.config.origin+'/portal/mestre/oficinas/conteudos/bestiary/novo');await page.getByRole('button',{name:'Usar criação avançada',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('ESPÉCIE E2E');await page.getByLabel('Apresentação revelada',{exact:true}).fill('Uma espécie encontrada na sessão.');await page.getByRole('button',{name:'Adicionar Informações por camadas',exact:true}).click();await page.getByLabel('Título da camada',{exact:true}).fill('CAMADA AUTORIZADA');await page.getByLabel('Conteúdo da camada',{exact:true}).fill('Conhecimento concedido pelo Mestre.');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();await page.waitForURL(url=>!url.pathname.endsWith('/novo'));const id=new URL(page.url()).pathname.split('/').pop();await page.getByRole('button',{name:'Revisar publicação',exact:true}).click();await confirm(page);

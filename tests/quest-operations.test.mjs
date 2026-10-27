@@ -24,8 +24,8 @@ test('objetivo interno e política por campo nunca vazam título ou contagem',as
 });
 test('pistas têm outbox individual persistente, reconhecimento/replay sem concessão e revogação imediata',async()=>{
  let q=await stage(await make(),'clues','PISTA A');q=await started(q);const id=q.clues[0].id;q=await cmd(q,'reveal-clue',{clueId:id,characters:['atlas'],presentation:'ANIMATED'});
- const events=(await f.atlas.request('/api/events')).value.items;assert.equal(events.length,1);assert.equal(events[0].title,'PISTA A');assert.deepEqual((await f.eiris.request('/api/events')).value.items,[]);
- const before=f.db.prepare('SELECT count(*) n FROM quest_clue_reveals').get().n;for(let i=0;i<2;i++)assert.equal((await f.atlas.request('/api/events/'+events[0].id+'/ack',{method:'POST'})).status,200);assert.deepEqual((await f.atlas.request('/api/events')).value.items,[]);assert.equal((await f.atlas.request('/api/events/'+events[0].id)).status,200);assert.equal(f.db.prepare('SELECT count(*) n FROM quest_clue_reveals').get().n,before);
+ const events=(await f.atlas.request('/api/events')).value.items.filter(e=>e.title==='PISTA A');assert.equal(events.length,1);assert.equal(events[0].title,'PISTA A');assert.ok(!(await f.eiris.request('/api/events')).value.items.some(e=>e.title==='PISTA A'));
+ const before=f.db.prepare('SELECT count(*) n FROM quest_clue_reveals').get().n;for(let i=0;i<2;i++)assert.equal((await f.atlas.request('/api/events/'+events[0].id+'/ack',{method:'POST'})).status,200);assert.ok(!(await f.atlas.request('/api/events')).value.items.some(e=>e.title==='PISTA A'));assert.equal((await f.atlas.request('/api/events/'+events[0].id)).status,200);assert.equal(f.db.prepare('SELECT count(*) n FROM quest_clue_reveals').get().n,before);
  assert.equal((await f.eiris.request('/api/events/'+events[0].id)).status,404);assert.equal((await f.master.request('/api/events/'+events[0].id+'/ack?view_as=atlas',{method:'POST'})).status,403);
  q=await cmd(q,'revoke-clue',{clueId:id,characters:['atlas']});assert.equal((await f.atlas.request('/api/events/'+events[0].id)).status,404);assert.deepEqual((await read(q)).value.clues,[]);
 });

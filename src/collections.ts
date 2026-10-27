@@ -35,7 +35,7 @@ export async function discoverCollection(db: DB, actor: Session, row: Row, char:
         fail(422, 'Confirme o encontro presenciado e seus observadores.');
     const previous = await one(db, 'SELECT snapshot_json FROM collection_discoveries WHERE record_id=? AND character_id=?', String(row.id), char);
     const previousText = previous ? JSON.parse(String(previous.snapshot_json)).personalText : '';
-    const snapshot = options.snapshot ?? { ...collectionSnapshot(contentPayload(row), options.personalText ?? previousText ?? ''), template: JSON.parse(String(row.published_template_json ?? 'null')) }, event = await enqueue(db, char, 'COLLECTION_DISCOVERY', String(row.id), null, options.presentation ?? 'SILENT');
+    const snapshot = options.snapshot ?? { ...collectionSnapshot(contentPayload(row), options.personalText ?? previousText ?? ''), template: JSON.parse(String(row.published_template_json ?? 'null')) }, event = await enqueue(db, char, 'COLLECTION_DISCOVERY', String(row.id), null, options.presentation ?? 'ANIMATED');
     await db.prepare('INSERT INTO collection_discoveries(record_id,character_id,snapshot_json,source_revision,event_id,actor_id) VALUES(?,?,?,?,?,?) ON CONFLICT(record_id,character_id) DO UPDATE SET active=1,snapshot_json=excluded.snapshot_json,source_revision=excluded.source_revision,event_id=excluded.event_id,actor_id=excluded.actor_id').run(String(row.id), char, JSON.stringify(snapshot), Number(row.published_revision), event, actor.userId);
     await db.prepare('INSERT INTO collection_reveal_history(id,record_id,character_id,action,snapshot_json,actor_id) VALUES(?,?,?,?,?,?)').run(randomUUID(), String(row.id), char, 'DISCOVER', JSON.stringify(snapshot), actor.userId);
     return snapshot;
@@ -101,7 +101,7 @@ registerEvent('COLLECTION_DISCOVERY', async (db, v, event) => {
     if (!d || d.event_id !== event.id)
         return null;
     const p = JSON.parse(String(d.snapshot_json));
-    return { title: p.title, text: [p.description, p.personalText].filter(Boolean).join('\n\n'), image: p.fileId ? `/api/collections/${row.id}/image?stamp=${digest(String(d.snapshot_json)).slice(0, 20)}` : null, alt: p.alt ?? '', href: '/portal/conteudos/' + row.kind + '/' + row.id };
+    return { kind: ({bestiary:'NOVA CRIATURA DESCOBERTA',memories:'NOVA RECORDAÇÃO',chocolatecards:'NOVA CARTA DE SAPO',curiosities:'NOVA CURIOSIDADE',rarities:'NOVA RARIDADE'} as Record<string,string>)[String(row.kind)], title: p.title, text: [p.description, p.personalText].filter(Boolean).join('\n\n'), image: p.fileId ? `/api/collections/${row.id}/image?stamp=${digest(String(d.snapshot_json)).slice(0, 20)}` : null, alt: p.alt ?? '', href: '/portal/conteudos/' + row.kind + '/' + row.id };
 });
 for (const rewardKind of ['COLLECTION', 'MEMORY'])
     registerReward(rewardKind, { validate: async (db, p) => {

@@ -14,15 +14,15 @@ import sharp from 'sharp';
 import { configuration, type Config } from './config.ts';
 import { openDatabase, one, all, transaction, audit, type DB, type Row } from './db.ts';
 import { HttpError, fail, token, digest, email, now, validPassword, hashPassword, verifyPassword, sessionFrom, createSession, clearSession, requireSession, requireMaster, viewerFor, mutationGuard, rateLimit, type Session } from './auth.ts';
-import { portalState, locationVisible, locationDTO, characterDTO, mediaVisible, publicationVisible } from './access.ts';
+import { portalState, regionVisible, locationVisible, locationDTO, characterDTO, mediaVisible, publicationVisible } from './access.ts';
 import { fields, bodyBuffer, jsonBody, send, text } from './http.ts';
 import { handleWorkshop } from './workshop.ts';
 import { handleNPCs, npcReferencesForLocation } from './npcs.ts';
 import { handleItems } from './items.ts';
 import { handleCampaign } from './campaign.ts';
-import { handleEvents } from './events.ts';
+import { handleEvents, discoveryAccessSnapshot, notifyDiscoveryAccess, registerEvent } from './events.ts';
 import { handleDocuments } from './documents.ts';
-import { handleContent } from './content.ts';
+import { handleContent, contentAllowed, contentProject, contentPayload } from './content.ts';
 import { handleCommerce } from './commerce.ts';
 import { handleLibrary } from './library.ts';
 import { handleCalendar } from './school.ts';
@@ -277,10 +277,12 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                         await known(db, 'access_groups', id);
                     await forEachAsync(members, async (c) => await known(db, 'characters', c));
                     await transaction(db, async () => {
+                        const worldBefore=await discoveryAccessSnapshot(db);
                         await db.prepare('INSERT INTO access_groups(id,name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name').run(id, name);
                         await db.prepare('DELETE FROM group_members WHERE group_id=?').run(id);
                         for (const c of members)
                             await db.prepare('INSERT INTO group_members(group_id,character_id) VALUES(?,?)').run(id, c);
+                        await notifyDiscoveryAccess(db, worldBefore);
                         await audit(db, actor.userId, 'GROUP_UPDATED', 'GROUP', id, { members });
                     });
                     return send(res, 200, { id });
@@ -290,8 +292,10 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                     await known(db, 'regions', id);
                     const isOpen = boolean(data.isOpen), scope = audience(data.audience);
                     await transaction(db, async () => {
+                        const worldBefore=await discoveryAccessSnapshot(db);
                         await setGrants(db, 'REGION', id, data);
                         await db.prepare('UPDATE regions SET is_open=?,audience=? WHERE id=?').run(isOpen, scope, id);
+                        await notifyDiscoveryAccess(db, worldBefore);
                         await audit(db, actor.userId, 'REGION_ACCESS_UPDATED', 'REGION', id, { isOpen: !!isOpen, audience: scope, characters: data.characters, groups: data.groups });
                     });
                     return send(res, 200, { ok: true });
@@ -316,8 +320,10 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                     const coordinate = (v: unknown) => v === null ? null : typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100 ? v : fail(400, 'Posição inválida.');
                     const x = coordinate(data.x), y = coordinate(data.y);
                     await transaction(db, async () => {
+                        const worldBefore=await discoveryAccessSnapshot(db);
                         await setGrants(db, 'LOCATION', id, data);
                         await db.prepare('UPDATE locations SET enabled=?,is_secret=?,audience=?,x=?,y=? WHERE id=?').run(enabled, secret, scope, x, y, id);
+                        await notifyDiscoveryAccess(db, worldBefore);
                         await audit(db, actor.userId, 'LOCATION_ACCESS_UPDATED', 'LOCATION', id, { enabled: !!enabled, isSecret: !!secret, audience: scope, characters: data.characters, groups: data.groups });
                     });
                     return send(res, 200, { ok: true });
@@ -330,7 +336,9 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                         fail(400, 'Casa inválida.');
                     const year = data.year === null ? null : Number.isInteger(data.year) && Number(data.year) >= 1 && Number(data.year) <= 7 ? Number(data.year) : fail(400, 'Ano escolar inválido.');
                     await transaction(db, async () => {
+                        const beforeAccess=await discoveryAccessSnapshot(db);
                         await db.prepare('UPDATE characters SET name=?,house_id=?,school_year=?,updated_at=? WHERE id=?').run(name, house, year, now(), id);
+                        await notifyDiscoveryAccess(db,beforeAccess);
                         await audit(db, actor.userId, 'CHARACTER_UPDATED', 'CHARACTER', id, { house, year });
                     });
                     return send(res, 200, { ok: true });
@@ -438,7 +446,7 @@ export function createApplication(config: Config = configuration(), suppliedDb?:
                 mime = 'image/webp';
                 res.setHeader('Cache-Control', 'public, max-age=3600');
             }
-            else if (['/simplicity.js', '/creations.js', '/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
+            else if (['/simplicity.js', '/image-gallery.js', '/magic-icons.js', '/creations.js', '/experience.js', '/action-captions.js', '/office-help.js', '/visuals.js', '/editor-tabs.js', '/quick-create.js', '/player-navigation.js', '/blob-client.js', '/style.css', '/app.js', '/workshop.js', '/npcs.js', '/items.js', '/campaign.js', '/delivery.js', '/documents.js', '/content.js', '/commerce.js', '/content-extensions.js', '/library.js', '/calendar.js', '/boards.js', '/cup.js', '/collections.js', '/archives.js', '/templates.js', '/investigations.js', '/mail.js', '/chocolate.js', '/editorial-ui.js'].includes(path)) {
                 filename = join(config.publicDir, path.slice(1));
                 mime = extname(path) === '.css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8';
             }
@@ -476,3 +484,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     for (const signal of ['SIGINT', 'SIGTERM'] as const)
         process.on(signal, () => app.server.close(() => { app.db.close(); process.exit(0); }));
 }
+
+registerEvent('WORLD_AVAILABLE', async (db,v,e) => {
+    const location=await one(db,'SELECT * FROM locations WHERE id=?',String(e.resource_id)),region=location?null:await one(db,'SELECT * FROM regions WHERE id=?',String(e.resource_id));
+    if(location?!await locationVisible(db,v,location):!region||!await regionVisible(db,v,region))return null;
+    const record=await one(db,'SELECT * FROM content_records WHERE id=?',String(e.resource_id));
+    const authored=record&&await contentAllowed(db,v,record)?await contentProject(db,v,record):null;
+    const asset=record&&authored?contentPayload(record).asset:null;
+    const image=authored?.image??(asset?'/assets/'+asset:location?.image?'/assets/'+location.image:null);
+    return {kind:location?'NOVO LOCAL DESCOBERTO':'NOVA REGIÃO DESCOBERTA',title:String((location??region)!.title),text:location?'Um novo lugar se abriu para sua jornada.':'Uma nova região está disponível.',image:image as string|null,alt:String(authored?.alt??''),href:location?'/portal/local/'+location.id:region!.id==='hogwarts'?'/portal/hogwarts':'/portal/regiao/'+region!.id};
+});

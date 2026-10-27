@@ -521,6 +521,12 @@ CREATE TABLE IF NOT EXISTS cup_cycle_results(id TEXT PRIMARY KEY,cycle_id TEXT N
 
 INSERT INTO schema_migrations(name) VALUES('021_simplified_portal.sql');
 
+-- 022_media_labels.sql
+-- Add a reusable display name; existing private files and references stay intact.
+ALTER TABLE workshop_files ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+
+INSERT INTO schema_migrations(name) VALUES('022_media_labels.sql');
+
 -- Dados canonicos: houses
 INSERT OR IGNORE INTO "houses"("id","name","crest","room") VALUES('gryffindor','Grifinória','gryffindor.webp','sala_grifinoria.webp');
 INSERT OR IGNORE INTO "houses"("id","name","crest","room") VALUES('hufflepuff','Lufa-Lufa','hufflepuff.webp','sala_lufalufa.webp');
