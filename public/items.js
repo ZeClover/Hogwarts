@@ -1,3 +1,4 @@
+import {magicIcon} from '/magic-icons.js';
 import {quickCreateForm,compactPolicyFields} from '/quick-create.js';
 import { defaultPolicy, readPolicy } from '/editorial-ui.js';
 const base='/portal/mestre/oficinas/itens',publicBase='/portal/artigos';
@@ -35,7 +36,7 @@ export function createItemOffice({api,esc,ico,label,empty,button,state,render,na
   function card(n,management){
     const p=management?n.payload:n,target=(management?base:publicBase)+'/'+n.id;
     const image=management?(p.fileId?`/api/master/workshop/items/${n.id}/image?version=${n.version}`:null):p.image;
-    return `<article class="card item-record"><a href="${target}" data-go="${target}">${image?`<img src="${esc(management?image:withView(image))}" alt="${esc(p.alt||'Imagem em preparação')}">`:`<div class="item-ornament">${ico('star',35)}</div>`}<div class="media-record-body">${management?`<span class="badge">${statuses[n.status]}</span>`:''}<h2>${esc(p.name)}</h2>${management?`<p class="subtle">${esc(n.private.category||'Sem categoria')}</p>${n.hasUnpublishedChanges?'<p class="draft-warning">Há alterações não publicadas.</p>':''}`:`<p>${esc(p.description.slice(0,160))}</p>`}</div></a></article>`;
+    return `<article class="card item-record"><a href="${target}" data-go="${target}">${image?`<img src="${esc(management?image:withView(image))}" alt="${esc(p.alt||'Imagem em preparação')}">`:`<div class="item-ornament">${magicIcon('artifact',35)}</div>`}<div class="media-record-body">${management?`<span class="badge">${statuses[n.status]}</span>`:''}<h2>${esc(p.name)}</h2>${management?`<p class="subtle">${esc(n.private.category||'Sem categoria')}</p>${n.hasUnpublishedChanges?'<p class="draft-warning">Há alterações não publicadas.</p>':''}`:`<p>${esc(p.description.slice(0,160))}</p>`}</div></a></article>`;
   }
   function moneyFields(name,title,value){
     const parts=value===null?['','','']:[Math.floor(value/493),Math.floor(value%493/29),value%29];

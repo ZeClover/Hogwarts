@@ -11,7 +11,7 @@ import { exists, expected, validatePolicy, policyAllows, imageStamp, type Policy
 import { locationVisible } from './access.ts';
 import { npcReference } from './npcs.ts';
 import { renderImage } from './workshop.ts';
-import { enqueue, registerEvent } from './events.ts';
+import { enqueue, enqueueOnce, notifyAvailable, availableRecipients, registerEvent } from './events.ts';
 type Domain = 'quests' | 'stories';
 type Payload = {
     title: string;
@@ -211,6 +211,7 @@ async function command(db: DB, domain: Domain, actor: Session, id: string, actio
     fields(data, ['version']);
     return await transaction(db, async () => {
         const before = await get(db, domain, id);
+        const previouslyVisible = action==='publish'&&domain==='quests'?await availableRecipients(db,'QUEST_AVAILABLE',id):[];
         expected(before, data.version);
         if (action === 'archive') {
             if (before.status === 'ARCHIVED')
@@ -242,6 +243,7 @@ async function command(db: DB, domain: Domain, actor: Session, id: string, actio
         await bump(db, domain, id);
         const row = await get(db, domain, id);
         await revision(db, domain, row, actor, action.toUpperCase());
+        if (action === 'publish' && domain === 'quests') await notifyAvailable(db, 'QUEST_AVAILABLE', id, undefined, previouslyVisible);
         return await adminDTO(db, domain, row);
     });
 }
@@ -302,6 +304,7 @@ async function questAccess(db: DB, actor: Session, id: string, action: string, d
         await bump(db, 'quests', id);
         const row = await get(db, 'quests', id);
         await revision(db, 'quests', row, actor, action.toUpperCase());
+        if (action === 'release') await notifyAvailable(db, 'QUEST_AVAILABLE', id, characters);
         return await adminDTO(db, 'quests', row);
     });
 }
@@ -607,15 +610,30 @@ async function outcomeCommand(db: DB, actor: Session, id: string, reopen: boolea
         await bump(db, 'quests', id);
         const row = await get(db, 'quests', id);
         await revision(db, 'quests', row, actor, reopen ? 'REOPENED' : 'CLOSED');
+        if (!reopen) for (const outcome of await all(db, 'SELECT id,characters_json FROM quest_outcomes WHERE quest_id=? AND version=?', id, Number(before.version)+1))
+            for (const char of JSON.parse(String(outcome.characters_json)) as string[]) await enqueueOnce(db, char, 'COMPLETION_SEAL', id, String(outcome.id));
         return await adminDTO(db, 'quests', row);
     });
 }
+registerEvent('QUEST_AVAILABLE', async (db, v, e) => {
+    const row = await one(db, 'SELECT * FROM quests WHERE id=?', String(e.resource_id));
+    if (!row || !await canRead(db, v, 'quests', row)) return null;
+    const p = await project(db, v, 'quests', row);
+    return { kind: /side/i.test(p.kind) ? 'NOVA SIDE-QUEST DESCOBERTA' : 'NOVA MISSÃO DESCOBERTA', title: p.title, text: p.summary, image: p.image, alt: p.alt, href: '/portal/missoes/grupo/' + row.id };
+});
+registerEvent('COMPLETION_SEAL', async (db, v, e) => {
+    const row = await one(db, 'SELECT * FROM quests WHERE id=?', String(e.resource_id));
+    const outcome = await one(db, 'SELECT * FROM quest_outcomes WHERE id=? AND quest_id=?', String(e.fragment_id), String(e.resource_id));
+    if (!row || !outcome || !await canRead(db,v,'quests',row) || !(JSON.parse(String(outcome.characters_json)) as string[]).includes(v.characterId!)) return null;
+    const p = await project(db,v,'quests',row);
+    return { kind: 'NOVO SELO DE CONCLUSÃO', title: p.title, text: 'Um novo selo foi guardado no seu Diário.', image: p.image, alt: p.alt, href: '/portal/diario' };
+});
 registerEvent('QUEST_CLUE', async (db, viewer, event) => {
     const row = await one(db, 'SELECT * FROM quests WHERE id=?', String(event.resource_id));
     if (!row)
         return null;
     const known = await clueRecord(db, viewer, row, String(event.fragment_id));
-    return known && known.row.event_id === event.id ? { title: known.saved.title, text: known.saved.text, href: `/portal/missoes/grupo/${row.id}` } : null;
+    return known && known.row.event_id === event.id ? { kind: 'NOVA PISTA', title: known.saved.title, text: known.saved.text, image: known.saved.fileId ? `/api/campaign/quests/${row.id}/clues/${known.saved.id}/image?stamp=${digest(String(known.row.snapshot_json)).slice(0,20)}` : null, alt: known.saved.alt, href: `/portal/missoes/grupo/${row.id}` } : null;
 });
 export { get as campaignGet, canRead as campaignCanRead, links as campaignLinks, bump as campaignBump, revision as campaignRevision, adminDTO as campaignAdminDTO };
 export async function handleCampaign(req: IncomingMessage, res: ServerResponse, url: URL, db: DB, config: Config, session?: Session): Promise<boolean> {

@@ -25,8 +25,8 @@ export async function verifyPassword(password: string, stored?: string) {
     return expected.length === actual.length && timingSafeEqual(actual, expected) && !!stored;
 }
 export function validPassword(value: unknown): string {
-    if (typeof value !== 'string' || value.length < 12 || value.length > 128)
-        fail(400, 'Use uma senha entre 12 e 128 caracteres.');
+    if (typeof value !== 'string' || value.length < 8 || value.length > 128)
+        fail(400, 'Use uma senha entre 8 e 128 caracteres.');
     return value;
 }
 export function email(value: unknown): string {

@@ -61,7 +61,7 @@ registerEvent('LETTER', async (db, v, e) => {
     const r = await one(db, 'SELECT * FROM letters WHERE id=?', String(e.resource_id));
     if (!r || r.status !== 'DELIVERED' || !payload(r).characters.includes(v.characterId!))
         return null;
-    return { title: payload(r).subject, text: 'Uma correspondência foi entregue.', href: '/portal/correio/' + r.id };
+    return { kind: 'NOVA CORRESPONDÊNCIA', title: payload(r).subject || 'Uma carta para você', image: '/assets/correio_envelope.webp', alt: 'Envelope de correspondência de Hogwarts', text: 'Uma correspondência foi entregue.', href: '/portal/correio/' + r.id };
 });
 export async function handleMail(req: IncomingMessage, res: ServerResponse, url: URL, db: DB, session?: Session): Promise<boolean> {
     const path = url.pathname, admin = path.startsWith('/api/master/mail');

@@ -1,7 +1,7 @@
 import { all, one, type DB } from './db.ts';
 import { fail } from './auth.ts';
 import { registerContent, registerReference, type Field, type ContentPayload } from './content.ts';
-import { documentFields, validateDocument, documentSections, registerDocumentKind, notifyDocument } from './journal.ts';
+import { documentFields, validateDocument, documentSections, registerDocumentKind } from './journal.ts';
 registerReference('houseResults', async (db) => (await all(db, 'SELECT id,snapshot_json FROM house_results UNION ALL SELECT id,snapshot_json FROM cup_cycle_results')).map(r => { const s = JSON.parse(String(r.snapshot_json)); return { id: String(r.id), name: s.academicYearLabel + ' · resultado ' + s.revision }; }));
 async function result(db: DB, p: ContentPayload) {
     if (!p.resultId)
@@ -26,5 +26,5 @@ for (const kind of ['yearbooks', 'retrospectives']) {
             validateDocument(db, p);
             if (kind === 'yearbooks')
                 await result(db, p);
-        }, allowed: (_db, v, _r, p) => kind === 'yearbooks' || v.characterId === p.characterId, published: async (db, r) => await notifyDocument(db, r, kind === 'retrospectives' ? [String(JSON.parse(String(r.published_json)).characterId)] : undefined), project: async (db, v, r, p) => { const s = kind === 'yearbooks' ? await result(db, p) : null; return { title: p.title, description: p.description, meta: [p.academicYear], sections: await documentSections(db, v, r, p), ...(s ? { body: 'Taça das Casas: ' + s.houses.find(h => h.id === s.winnerHouseId)?.name, table: { columns: ['Posição', 'Casa', 'Pontos'], rows: s.houses.map(h => [h.rank, h.name, h.points]) } } : {}) }; } });
+        }, allowed: (_db, v, _r, p) => kind === 'yearbooks' || v.characterId === p.characterId, project: async (db, v, r, p) => { const s = kind === 'yearbooks' ? await result(db, p) : null; return { title: p.title, description: p.description, meta: [p.academicYear], sections: await documentSections(db, v, r, p), ...(s ? { body: 'Taça das Casas: ' + s.houses.find(h => h.id === s.winnerHouseId)?.name, table: { columns: ['Posição', 'Casa', 'Pontos'], rows: s.houses.map(h => [h.rank, h.name, h.points]) } } : {}) }; } });
 }

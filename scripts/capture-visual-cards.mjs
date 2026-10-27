@@ -1,0 +1,19 @@
+import {resolve,join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {chromium} from '@playwright/test';
+import {magicIcon,magicPaths} from '../public/magic-icons.js';
+const project=process.cwd(),repo=resolve(process.argv[2]??'.'),variant=process.argv[3]??'before',output=join(project,'docs/screenshots/imagens-descobertas');
+process.chdir(repo);
+const {fixture}=await import(pathToFileURL(join(repo,'tests/helpers.mjs')));
+const {questDiscovery}=await import('../tests/visual-discoveries-fixtures.mjs');
+const f=await fixture(),browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE??'/usr/bin/chromium',args:['--no-sandbox']});
+try{
+ const image=(await f.master.request('/api/master/workshop/files',{method:'POST',body:{asset:'hogwarts_corredor_velas.webp'}})).value;
+ const illustrated=await questDiscovery(f,{fileId:image.id}),plain=await questDiscovery(f,{title:'O enigma da chave'});f.db.prepare('UPDATE quests SET updated_at=? WHERE id=?').run(200,illustrated.id);f.db.prepare('UPDATE quests SET updated_at=? WHERE id=?').run(100,plain.id);for(const event of (await f.atlas.request('/api/events')).value.items)await f.atlas.request('/api/events/'+event.id+'/ack',{method:'POST'});
+ const page=await browser.newPage();await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('atlas@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await page.locator('.top').waitFor();await page.goto(f.config.origin+'/portal/missoes/grupo');await page.getByRole('heading',{name:'Salas Particulares',exact:true}).waitFor();await mkdir(output,{recursive:true});
+ for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>Promise.all([...document.images].map(img=>img.decode().catch(()=>{}))));await page.screenshot({path:join(output,`cartoes-${variant}-${width}.png`),fullPage:true});}
+ const labels={wand:'Varinha',quest:'Missão',book:'Livro',lesson:'Aula',creature:'Criatura',memory:'Recordação',owl:'Coruja',letter:'Carta',seal:'Selo',potion:'Poção',artifact:'Artefato',shop:'Loja',location:'Local',castle:'Castelo',key:'Chave',coins:'Moedas',cup:'Taça',newspaper:'Profeta Diário',frog:'Sapo de Chocolate',quill:'Pena',portrait:'Personagem',lock:'Acesso privado',curiosity:'Curiosidade'};
+ const html=`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ícones dos Arquivos Mágicos</title><style>body{margin:0;padding:40px;background:radial-gradient(ellipse at top,#392c31,#101116);color:#f3ead9;font:16px/1.6 'Trebuchet MS',sans-serif}main{max-width:960px;margin:auto}h1{font:36px Georgia,serif;color:#e4c58b}p{color:#c7b69b}.icons{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:16px}.icons div{display:grid;justify-items:center;gap:10px;padding:22px 10px;border:1px solid #bd9c6059;border-radius:6px;background:#201d2380;font-size:13px}.magic-icon{color:#e4c58b}small{color:#c7b69b}</style><main><small>HOGWARTS · ARQUIVOS MÁGICOS</small><h1>Pequenos símbolos, grandes histórias.</h1><p>Ícones vetoriais simples, com rótulos legíveis e traços dourados.</p><div class="icons">${Object.entries(labels).filter(([key])=>magicPaths[key]).map(([key,label])=>`<div>${magicIcon(key,36)}<span>${label}</span></div>`).join('')}</div></main></html>`;
+ if(variant==='after'){await writeFile(join(project,'docs/icones-magicos.html'),html);await page.setContent(html);for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:join(output,`icones-${width}.png`),fullPage:true});}}
+}finally{await browser.close();await f.close();}

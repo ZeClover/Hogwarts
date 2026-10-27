@@ -1,10 +1,11 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture,commercialFixture} from './helpers.mjs';
 import {settleAnimations} from './browser-helpers.mjs';
 let f;test.use({actionTimeout:10000});test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(p,email='master@test.invalid'){await p.goto(f.config.origin+'/entrar');await p.getByLabel('E-mail',{exact:true}).fill(email);await p.getByLabel('Senha',{exact:true}).fill(f.password);await p.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(p.locator('.top')).toBeVisible();}
+async function login(p,email='master@test.invalid'){await dismissIncidentalDiscoveries(p);await p.goto(f.config.origin+'/entrar');await p.getByLabel('E-mail',{exact:true}).fill(email);await p.getByLabel('Senha',{exact:true}).fill(f.password);await p.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(p.locator('.top')).toBeVisible();}
 async function audit(p){await settleAnimations(p);expect(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const a=await new AxeBuilder({page:p}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(a.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
 for(const width of [1440,390])test('Central, aluno e navegação sem calendário em '+width,async({page})=>{
  await page.setViewportSize({width,height:1000});await login(page);await page.goto(f.config.origin+'/portal/mestre');await expect(page.getByRole('button',{name:'Criar missão',exact:true})).toBeVisible();expect(await page.locator('a[href*="calendario"],a[href*="/conteudos/events"],a[href*="/conteudos/timetables"],a[href*="/oficinas/historias"]').count()).toBe(0);await audit(page);

@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {openPolicy,selectEditorStep} from './browser-helpers.mjs';
 import { test, expect } from '@playwright/test';
@@ -13,7 +14,7 @@ test.beforeAll(async()=>{
   const created=await f.master.request('/api/master/workshop/npcs',{method:'POST',body:{payload:{name:'NPC VINCULADO DE TESTE',description:'Descrição de teste',role:'PROFESSOR',houseId:null,locationId:null,relatedLocations:[],portraitFileId:null,portraitAlt:''},policy:{audience:'ALL',characters:[],groups:[],houses:[],schoolYears:[],cohorts:[],excludedCharacters:[],regionId:null,locationId:null},privateNotes:'SEGREDO NPC'}});npc=created.value.id;await f.master.request(`/api/master/workshop/npcs/${npc}/publish`,{method:'POST',body:{version:created.value.version}});
 });
 test.afterAll(async()=>{await f?.close();});
-async function login(page,email='master@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email='master@test.invalid'){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 async function checks(page){await settleAnimations(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);}
 async function capture(page,name){await page.locator('#main').focus();await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await expect(page.locator('#toast')).not.toHaveClass(/visible/,{timeout:8_000});await page.screenshot({path:'docs/screenshots/f2-2a/'+name,fullPage:true,animations:'disabled'});}
 async function confirm(page){await page.getByRole('button',{name:'Confirmar ação',exact:true}).press('Enter');await expect(page.getByRole('button',{name:'Confirmar ação',exact:true})).toHaveCount(0);await expect(page.locator('#toast')).toContainText('Ação registrada.');}

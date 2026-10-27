@@ -93,7 +93,7 @@ registerEvent('LIBRARY_PAGE', async (db, v, event) => {
         return null;
     const grant = await one(db, 'SELECT event_id FROM content_page_reveals WHERE record_id=? AND page_id=? AND character_id=? AND active=1', String(row.id), String(event.fragment_id), v.characterId);
     const page = (await libraryPages(db, v, row)).find(p => p.id === event.fragment_id);
-    return grant?.event_id === event.id && page ? { title: page.title, text: page.text, href: '/portal/conteudos/' + row.kind + '/' + row.id } : null;
+    return grant?.event_id === event.id && page ? { kind: 'NOVA PÁGINA DESCOBERTA', title: page.title, text: page.text, image: page.image, alt: page.alt, href: '/portal/conteudos/' + row.kind + '/' + row.id } : null;
 });
 export async function handleLibrary(req: IncomingMessage, res: ServerResponse, url: URL, db: DB, config: Config, session?: Session): Promise<boolean> {
     const match = url.pathname.match(/^\/api\/library\/([\w-]+)\/pages\/([\w-]+)\/image$/);

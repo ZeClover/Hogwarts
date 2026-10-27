@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
@@ -6,7 +7,7 @@ import {settleAnimations} from './browser-helpers.mjs';
 let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page,email='master@test.invalid'){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email='master@test.invalid'){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 
 test('seis criadores usam só título e conservam rascunhos, sem associar primeiro item/local automaticamente',async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page);

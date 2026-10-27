@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -6,7 +7,7 @@ import {settleAnimations} from './browser-helpers.mjs';
 let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 const route='/portal/mestre/oficinas/conteudos/newspapers/novo';
 for(const width of [1440,390])test('notícia com dois campos publica sem calendário; leitura, edição privada e acessibilidade em '+width,async({page})=>{
  await page.setViewportSize({width,height:1000});await login(page);await page.goto(f.config.origin+route);

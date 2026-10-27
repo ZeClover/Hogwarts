@@ -25,3 +25,11 @@ export async function openDisclosure(page,title){
  const summary=page.getByText(title,{exact:true}).and(page.locator('summary'));
  if(!await summary.evaluate(el=>el.closest('details')?.open??false))await summary.click();
 }
+
+// Regression flows dismiss the new discovery overlay through its real UI.
+// Dedicated discovery tests exercise the queue and persistence without this handler.
+export async function dismissIncidentalDiscoveries(page,keepClues=false){
+ if(page.__discoveryDismissal)return;page.__discoveryDismissal=true;
+ const overlay=page.locator('.reveal-dialog:has([data-reveal-close])'+(keepClues?':not(:has-text("NOVA PISTA"))':''));
+ await page.addLocatorHandler(overlay,async dialog=>{await dialog.locator('[data-reveal-close]').click();},{noWaitAfter:true});
+}

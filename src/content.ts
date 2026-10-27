@@ -1,3 +1,4 @@
+import { discoveryAccessSnapshot, notifyDiscoveryAccess, registerEvent } from './events.ts';
 import { filterAsync, mapAsync } from './async-array.ts';
 import { kindFamilies, templateFamilies, templateChoices, templateSnapshot } from './templates-model.ts';
 import { randomUUID } from 'node:crypto';
@@ -180,6 +181,7 @@ async function save(db: DB, actor: Session, kind: string, id: string, data: Reco
 async function command(db: DB, actor: Session, kind: string, id: string, action: string, data: Record<string, unknown>) {
     return await transaction(db, async () => {
         const before = await contentRecord(db, kind, id), schema = contentSchema(kind);
+        const previouslyVisible = action === 'publish' ? await discoveryAccessSnapshot(db) : new Map<string,string[]>();
         expected(before, data.version);
         if (!['publish', 'prepare', 'duplicate', 'archive', 'restore'].includes(action)) {
             if (!schema.action)
@@ -215,6 +217,7 @@ async function command(db: DB, actor: Session, kind: string, id: string, action:
         if (action === 'publish') {
             await db.prepare('UPDATE content_records SET published_json=draft_json,published_policy_json=draft_policy_json,published_template_json=draft_template_json,published_revision=version WHERE id=?').run(id);
             await schema.published?.(db, await contentRecord(db, kind, id), before);
+            await notifyDiscoveryAccess(db, previouslyVisible);
         }
         if (action === 'archive')
             await schema.archived?.(db, await contentRecord(db, kind, id));
@@ -309,3 +312,11 @@ export async function handleContent(req: IncomingMessage, res: ServerResponse, u
     }
     fail(404, 'Recurso não encontrado.');
 }
+
+const discoveryKinds: Record<string, string> = { books: 'NOVO LIVRO', lessons: 'NOVA AULA', shops: 'NOVO ESTABELECIMENTO', notices: 'NOVO AVISO' };
+registerEvent('CONTENT_AVAILABLE', async (db, v, event) => {
+    const row = await one(db, 'SELECT * FROM content_records WHERE id=?', String(event.resource_id));
+    if (!row || !discoveryKinds[String(row.kind)] || !await contentAllowed(db, v, row)) return null;
+    const p = await contentProject(db, v, row);
+    return { kind: discoveryKinds[String(row.kind)], title: String(p.title), text: String(p.description ?? 'Um novo registro está disponível.'), image: p.image as string | null, alt: String(p.alt ?? ''), href: '/portal/conteudos/' + row.kind + '/' + row.id };
+});

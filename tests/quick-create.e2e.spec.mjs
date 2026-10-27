@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
@@ -5,12 +6,12 @@ import {settleAnimations,openPolicy} from './browser-helpers.mjs';
 let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 async function accessible(page){await settleAnimations(page);const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);}
 
 test('missão só com título mantém campos entre abas, política privada e publicação separada',async({page})=>{
  await login(page);await page.goto(f.config.origin+'/portal/mestre/oficinas/missoes/novo');
- await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.locator('[type=file]')).toHaveCount(0);
+ await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.locator('[type=file]:visible')).toHaveCount(0);await expect(page.getByRole('button',{name:'Adicionar imagem',exact:true})).toBeVisible();
  await page.getByLabel('Título',{exact:true}).fill('MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await help.locator('summary').click();await expect(page.getByLabel('Título',{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await page.getByLabel('Tipo',{exact:true}).selectOption('Missão de grupo');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await help.locator('summary').click();await expect(page.getByLabel('Tipo',{exact:true})).toHaveValue('Missão de grupo');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();
  const id=new URL(page.url()).pathname.split('/').pop();

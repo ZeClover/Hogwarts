@@ -1,9 +1,10 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
 import {settleAnimations} from './browser-helpers.mjs';
 let f;test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
-async function login(page){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill('master@test.invalid');await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 for(const [id,house,room] of [['atlas','gryffindor','sala_grifinoria'],['darius','gryffindor','sala_grifinoria'],['eiris','hufflepuff','sala_lufalufa'],['vane','slytherin','sala_sonserina'],['drake','ravenclaw','sala_corvinal']]){
  test('Casa de '+id+' mantém hero duplo, tema, retornos e imagens em desktop/mobile',async({page})=>{
   await login(page);const writes=[];page.on('request',r=>{if(r.method()!=='GET'&&r.method()!=='HEAD')writes.push(r.url());});

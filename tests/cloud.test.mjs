@@ -173,13 +173,13 @@ test('migrations da nuvem executam pelo SDK libSQL e repetição preserva os dad
   try{
     const config={migrationsDir:resolve('migrations')};
     await migrateCloudDatabase(db,config);
-    assert.equal((await db.prepare('SELECT count(*) n FROM schema_migrations').get()).n,21);
+    assert.equal((await db.prepare('SELECT count(*) n FROM schema_migrations').get()).n,22);
     assert.equal((await db.prepare('SELECT count(*) n FROM houses').get()).n,4);
     assert.equal((await db.prepare('SELECT count(*) n FROM characters').get()).n,5);
     assert.deepEqual(await db.prepare('PRAGMA foreign_key_check').all(),[]);
     await db.prepare('UPDATE characters SET name=? WHERE id=?').run('Nome preservado','atlas');
     await migrateCloudDatabase(db,config);
     assert.equal((await db.prepare('SELECT name FROM characters WHERE id=?').get('atlas')).name,'Nome preservado');
-    assert.equal((await db.prepare('SELECT count(*) n FROM schema_migrations').get()).n,21);
+    assert.equal((await db.prepare('SELECT count(*) n FROM schema_migrations').get()).n,22);
   }finally{db.close();await rm(directory,{recursive:true,force:true});}
 });

@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {mkdir} from 'node:fs/promises';
@@ -6,7 +7,7 @@ let f,offer,shop;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots/f2-4',{recursive:true});({offer,shop}=await commercialFixture(f,{stock:2,price:29}));});
 test.afterAll(async()=>{await f?.close();});
-async function login(page,email){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 async function confirm(page){await page.getByRole('button',{name:'Confirmar operação',exact:true}).click();await expect(page.getByRole('button',{name:'Confirmar operação',exact:true})).toHaveCount(0);}
 test('crédito manual, sacola, aprovação e comprovante privado funcionam pela interface',async({page,browser})=>{
  await page.setViewportSize({width:1440,height:1000});await login(page,'master@test.invalid');await page.getByRole('button',{name:'Carteiras e pedidos',exact:true}).click();await page.getByText('Lançamento detalhado',{exact:true}).click();const adjust=page.locator('[data-commerce-form="adjust"]');await adjust.getByLabel('Personagem',{exact:true}).selectOption('atlas');await adjust.getByLabel('Galeões',{exact:true}).fill('1');await adjust.getByLabel('Motivo privado',{exact:true}).fill('SEGREDO FINANCEIRO DO MESTRE');await adjust.getByRole('button',{name:'Revisar lançamento',exact:true}).click();await confirm(page);await expect(page.getByText('1 G · 0 S · 0 N',{exact:true})).toBeVisible();

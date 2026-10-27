@@ -1,3 +1,4 @@
+import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {openDisclosure} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -7,7 +8,7 @@ let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();await mkdir('docs/screenshots/f3-3',{recursive:true});});
 test.afterAll(async()=>{await f?.close();});
-async function login(page,email){await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
+async function login(page,email){await dismissIncidentalDiscoveries(page);await page.goto(f.config.origin+'/entrar');await page.getByLabel('E-mail',{exact:true}).fill(email);await page.getByLabel('Senha',{exact:true}).fill(f.password);await page.getByRole('button',{name:'Entrar nos arquivos'}).click();await expect(page.locator('.top')).toBeVisible();}
 async function confirm(page){await page.getByRole('button',{name:'Confirmar operação',exact:true}).click();await expect(page.getByRole('button',{name:'Confirmar operação',exact:true})).toHaveCount(0);}
 test('pontos e correção manuais atualizam ampulhetas; resultado depende da escolha do Mestre',async({page,browser})=>{
  await login(page,'master@test.invalid');await page.getByRole('button',{name:'Pontos das Casas',exact:true}).click();await openDisclosure(page,'Iniciar novo ciclo independente');await page.getByLabel('Nome do ciclo',{exact:true}).fill('Ciclo de teste');await page.getByRole('button',{name:'Criar ciclo',exact:true}).click();const form=page.locator('[data-cup-form="points"]');await form.getByLabel('Casa',{exact:true}).selectOption('gryffindor');await form.getByLabel('Quantidade positiva ou negativa',{exact:true}).fill('25');await openDisclosure(page,'Motivo e referências (opcionais)');await form.getByLabel('Motivo privado (opcional)',{exact:true}).fill('MOTIVO SECRETO DA TAÇA');await form.getByRole('button',{name:'Confirmar pontos',exact:true}).click();await expect(page.locator('#toast')).toContainText('Operação registrada.');await form.getByLabel('Quantidade positiva ou negativa',{exact:true}).fill('-5');await openDisclosure(page,'Motivo e referências (opcionais)');await form.getByLabel('Motivo privado (opcional)',{exact:true}).fill('CORREÇÃO SECRETA');await form.getByRole('button',{name:'Confirmar pontos',exact:true}).click();await expect(page.locator('#toast')).toContainText('Operação registrada.');

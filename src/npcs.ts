@@ -1,3 +1,4 @@
+import {enqueueOnce,registerEvent} from './events.ts';
 import { filterAsync, flatMapAsync, forEachAsync } from './async-array.ts';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -238,6 +239,7 @@ async function revealFragment(db: DB, actor: Session, id: string, data: Record<s
                     .run(id, fragmentId, character, JSON.stringify({ title: fragment.title, text: fragment.text }), Number(before.published_revision), actor.userId);
         }
         await db.prepare('UPDATE npcs SET version=version+1,updated_at=? WHERE id=?').run(now(), id);
+        if(!revoke)for(const character of characters)await enqueueOnce(db,character,'NPC_FRAGMENT',id,fragmentId);
         const row = await getNPC(db, id);
         await revision(db, row, actor, revoke ? 'FRAGMENT_REVOKED' : 'FRAGMENT_REVEALED');
         return await administrative(db, row);
@@ -368,3 +370,10 @@ export async function handleNPCs(req: IncomingMessage, res: ServerResponse, url:
     }
     fail(404, 'Recurso não encontrado.');
 }
+
+registerEvent('NPC_FRAGMENT',async(db,v,e)=>{
+ const row=await one(db,'SELECT * FROM npcs WHERE id=?',String(e.resource_id));
+ if(!row||!await canRead(db,v,row))return null;
+ const p=await projectNPC(db,v,row),fragment=p.fragments.find(f=>f.id===e.fragment_id);
+ return fragment?{kind:'NOVA INFORMAÇÃO SOBRE NPC',title:fragment.title,text:fragment.text,image:p.portrait,alt:p.portraitAlt,href:'/portal/personagens/'+row.id}:null;
+});
