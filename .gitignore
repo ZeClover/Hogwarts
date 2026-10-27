@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+data/
+backups/
+test-results/
+playwright-report/
+work/
+*.sqlite*
+*.log
+
+.vercel/
+.env.*
+!.env.example
+!.env.vercel.example
+public/blob-client.js

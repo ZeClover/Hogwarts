@@ -1,0 +1,86 @@
+[
+  {
+    "screen": "inicio",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 5974560
+  },
+  {
+    "screen": "explorar",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 4320000
+  },
+  {
+    "screen": "diario",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 4320000
+  },
+  {
+    "screen": "biblioteca",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 4320000
+  },
+  {
+    "screen": "missao",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 5106240
+  },
+  {
+    "screen": "central",
+    "device": "desktop",
+    "sameDimensions": true,
+    "differentChannels": 18452,
+    "totalChannels": 19327680
+  },
+  {
+    "screen": "inicio",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 2042820
+  },
+  {
+    "screen": "explorar",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 992160
+  },
+  {
+    "screen": "diario",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 1127880
+  },
+  {
+    "screen": "biblioteca",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 1118520
+  },
+  {
+    "screen": "missao",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 0,
+    "totalChannels": 1488240
+  },
+  {
+    "screen": "central",
+    "device": "mobile",
+    "sameDimensions": true,
+    "differentChannels": 18413,
+    "totalChannels": 7232940
+  }
+]

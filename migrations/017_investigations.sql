@@ -1,0 +1,4 @@
+CREATE TABLE investigation_cases(id TEXT PRIMARY KEY,owner_character_id TEXT NOT NULL REFERENCES characters(id),members_json TEXT NOT NULL,title TEXT NOT NULL,summary TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'OPEN' CHECK(status IN('OPEN','ARCHIVED')),private_warning TEXT NOT NULL DEFAULT '',version INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE investigation_notes(id TEXT PRIMARY KEY,case_id TEXT NOT NULL REFERENCES investigation_cases(id),author_user_id TEXT NOT NULL REFERENCES users(id),character_id TEXT NOT NULL REFERENCES characters(id),body TEXT NOT NULL,hidden INTEGER NOT NULL DEFAULT 0,version INTEGER NOT NULL DEFAULT 1);
+CREATE INDEX investigation_notes_case ON investigation_notes(case_id);
+CREATE TABLE investigation_revisions(id TEXT PRIMARY KEY,case_id TEXT NOT NULL REFERENCES investigation_cases(id),actor_id TEXT NOT NULL REFERENCES users(id),action TEXT NOT NULL,snapshot_json TEXT NOT NULL);
