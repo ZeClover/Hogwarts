@@ -47,7 +47,7 @@ export function createQuestCertificates({api,state,esc,toast}){
  }
  function mount(root){
   const placeholder=root.querySelector('[data-quest-certificates]');if(!placeholder||state.session?.role!=='MASTER'||state.view){reset();return;}const next=state.session.csrf+':'+placeholder.dataset.questId;
-  if(next===key&&host){placeholder.replaceWith(host);host.hidden=root.querySelector('.quest-tabbed-editor')?.dataset.editorActive!=='certificates';return;}
+  if(next===key&&host){placeholder.replaceWith(host);host.hidden=root.querySelector('.quest-tabbed-editor')?.dataset.editorActive!=='rewards';return;}
   reset();key=next;id=placeholder.dataset.questId;host=placeholder;host.addEventListener('click',e=>void action(e));const dirty=e=>{if(e.target.closest('[data-inline-certificate-form]'))state.certificateDirty=true;};host.addEventListener('input',dirty);host.addEventListener('change',dirty);observer=new window.MutationObserver(()=>{if(!host.hidden)void load();});observer.observe(host,{attributes:true,attributeFilter:['hidden']});render();if(!host.hidden)void load();
  }
  return {mount,saveDraft};

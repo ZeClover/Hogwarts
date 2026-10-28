@@ -27,3 +27,9 @@ test('repetir após HTTP 500 volta ao botão sem consultar uma sessão de servid
   await expect(page.getByRole('status').filter({hasText:'HTTP 500'})).toBeVisible();await page.getByRole('button',{name:'Tentar novamente',exact:true}).click();await expect(page.getByRole('button',{name:'Tentar novamente',exact:true})).toBeEnabled();expect(checks).toBe(2);expect(sessionReads).toBe(0);await expect(page.locator('input[type=password]')).toHaveCount(0);
  }finally{await f.close();}
 });
+
+test('falha de inicialização mostra o diagnóstico permitido e nunca mostra senha nem dados do SDK',async({page})=>{
+ const f=await fixture();try{
+  await page.route('**/api/auth/context',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({code:'DATABASE_MIGRATIONS',error:'libsql://segredo:token@privado.invalid'})}));await page.goto(f.config.origin+'/entrar');await expect(page.getByRole('status').filter({hasText:'DATABASE_MIGRATIONS'})).toContainText('precisa ser atualizado');await expect(page.locator('input[type=password]')).toHaveCount(0);await expect(page.locator('body')).not.toContainText('libsql://');await expect(page.getByRole('button',{name:'Tentar novamente',exact:true})).toBeEnabled();
+ }finally{await f.close();}
+});

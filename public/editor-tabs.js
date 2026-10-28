@@ -1,4 +1,6 @@
-const tabs=[['story','História'],['links','NPCs/locais'],['objectives','Objetivos'],['clues','Pistas'],['participants','Participantes'],['outcomes','Desfechos'],['rewards','Recompensas'],['certificates','Certificados'],['publication','Publicação']];
+import {magicIcon} from '/magic-icons.js';
+import {questSections} from '/quest-sheet.js';
+const tabs=questSections.map(([id,title])=>[id,title]);
 const draftForms='[data-campaign-form="profile"],[data-campaign-form="inline-objective"],[data-campaign-form="inline-clue"],[data-inline-reward-form],[data-inline-certificate-form]';
 const activeEditors=new Map();
 function revealActiveTab(editor){const nav=editor.querySelector('.editor-step-tabs'),tab=nav?.querySelector('[aria-selected="true"]');if(!tab||nav.scrollWidth<=nav.clientWidth)return;const n=nav.getBoundingClientRect(),t=tab.getBoundingClientRect();if(t.left<n.left)nav.scrollLeft-=n.left-t.left;else if(t.right>n.right)nav.scrollLeft+=t.right-n.right;}
@@ -15,28 +17,30 @@ function activate(editor,key){
 // Enhance the existing forms in place. Inputs keep their form association and
 // DOM values when a tab changes; no save, render or API mutation is triggered.
 export function enhanceQuestEditor(root,state){
-  if(state.session?.role!=='MASTER'||state.view||!/^\/portal\/mestre\/oficinas\/missoes\/[^/]+$/.test(state.page)||state.page.endsWith('/novo'))return;
+  if(state.session?.role!=='MASTER'||state.view||!/^\/portal\/mestre\/oficinas\/missoes\/[^/]+$/.test(state.page))return;
   const grid=root.querySelector('.workshop-editor'),form=grid?.querySelector('[data-campaign-form="profile"]');if(!grid||!form)return;
-  const editor=document.createElement('section');editor.className='quest-tabbed-editor';editor.dataset.editorKey=state.page;
+  const editor=document.createElement('section');editor.className='quest-tabbed-editor';editor.dataset.editorKey=state.page;editor.dataset.editorNew=String(state.page.endsWith('/novo'));
   grid.before(editor);editor.append(grid);
-  form.dataset.editorPanel='story links publication';
+  form.dataset.editorPanel=tabs.map(([id])=>id).join(' ');
   for(const field of form.querySelector('.editor-fields').children){
+    if(field.dataset.editorPanel)continue;
     if(field.matches('.field'))field.dataset.editorPanel='story';
-    if(field.matches('details'))field.dataset.editorPanel=field.hasAttribute('data-compact-policy')?'publication':field.querySelector('[name="npcId"]')?'links':'story';
-    if(field.matches('p.subtle'))field.dataset.editorPanel='publication';
+    if(field.matches('details'))field.dataset.editorPanel=field.hasAttribute('data-compact-policy')?'story':field.querySelector('[name="npcId"]')?'story':'story';
+    if(field.matches('p.subtle'))field.dataset.editorPanel='story';
   }
   const sidebar=grid.querySelector('.editor-sidebar');
-  sidebar?.querySelectorAll(':scope > section').forEach(section=>{section.dataset.editorPanel=section.classList.contains('campaign-access')?'participants':'publication';});
+  sidebar?.querySelectorAll(':scope > section').forEach(section=>{section.dataset.editorPanel='story';});
+  if(sidebar){const tools=document.createElement('details');tools.className='advanced-fields quest-management-tools';tools.dataset.editorPanel='story';const summary=document.createElement('summary');summary.textContent='Acesso, participantes, publicação e histórico';sidebar.before(tools);tools.append(summary,sidebar);}
   const confirm=grid.querySelector('#campaign-confirm');
   if(confirm){const shared=document.createElement('section');shared.className='editor-confirm';shared.append(confirm);editor.prepend(shared);}
   const operations=grid.querySelector('.quest-operations');
   if(operations){operations.dataset.editorPanel='objectives clues outcomes';operations.querySelectorAll('.quest-operation-panel').forEach(section=>{const action=section.querySelector('form')?.dataset.campaignForm;section.dataset.editorPanel=action==='outcome'?'outcomes':action==='clue-reveal'||section.querySelector('h3')?.textContent==='Pistas'?'clues':'objectives';});}
-  const rewards=document.createElement('section');rewards.className='card quest-operation-panel inline-quest-rewards';rewards.dataset.editorPanel='rewards';rewards.dataset.questRewards='';rewards.dataset.questId=state.page.split('/').pop();rewards.innerHTML='<h2 class="head2">Recompensas</h2><p class="subtle">Prepare, edite e entregue as recompensas desta missão aqui.</p><div data-inline-rewards-content></div>';grid.firstElementChild.append(rewards);
-  const certificates=document.createElement('section');certificates.className='card quest-operation-panel inline-quest-certificates';certificates.dataset.editorPanel='certificates';certificates.dataset.questCertificates='';certificates.dataset.questId=rewards.dataset.questId;certificates.innerHTML='<h2 class="head2">Certificados</h2><p class="subtle">Prepare os documentos, confira o PDF e libere ao titular aqui.</p><div data-inline-certificates-content></div>';grid.firstElementChild.append(certificates);
+  if(!state.page.endsWith('/novo')){const rewards=document.createElement('section');rewards.className='card quest-operation-panel inline-quest-rewards';rewards.dataset.editorPanel='rewards';rewards.dataset.questRewards='';rewards.dataset.questId=state.page.split('/').pop();rewards.innerHTML='<h2 class="head2">Recompensas</h2><p class="subtle">Prepare, edite e entregue as recompensas desta missão aqui.</p><div data-inline-rewards-content></div>';grid.firstElementChild.append(rewards);
+  const certificates=document.createElement('section');certificates.className='card quest-operation-panel inline-quest-certificates';certificates.dataset.editorPanel='rewards';certificates.dataset.questCertificates='';certificates.dataset.questId=rewards.dataset.questId;certificates.innerHTML='<h2 class="head2">Certificados</h2><p class="subtle">Prepare os documentos, confira o PDF e libere ao titular aqui.</p><div data-inline-certificates-content></div>';grid.firstElementChild.append(certificates);}
   const nav=document.createElement('div');nav.className='editor-step-tabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Etapas da missão');
   grid.id='quest-editor-panels';grid.setAttribute('role','tabpanel');grid.tabIndex=0;
-  for(const [key,title] of tabs){const tab=document.createElement('button');tab.type='button';tab.id='quest-tab-'+key;tab.dataset.editorTab=key;tab.setAttribute('role','tab');tab.textContent=title;tab.setAttribute('aria-controls',grid.id);nav.append(tab);}
-  const toolbar=document.createElement('div');toolbar.className='quest-editor-toolbar';toolbar.append(nav);const actions=document.createElement('div');actions.className='quest-save-actions';actions.innerHTML='<button class="btn" type="button" data-quest-save>Salvar</button><span class="subtle" data-quest-save-status role="status" aria-live="polite">Alterações da missão</span>';toolbar.append(actions);editor.prepend(toolbar);root.querySelector('[data-open-quest-rewards]')?.remove();activate(editor,activeEditors.get(state.page)??'story');
+  for(const [key,title] of tabs){const tab=document.createElement('button');tab.type='button';tab.id='quest-tab-'+key;tab.dataset.editorTab=key;tab.setAttribute('role','tab');tab.innerHTML=magicIcon(({story:'quest',objectives:'quill',links:'portrait',clues:'key',outcomes:'scroll',rewards:'seal',consequences:'wand'})[key],16)+'<span>'+title+'</span>';tab.setAttribute('aria-controls',grid.id);nav.append(tab);}
+  const toolbar=document.createElement('div');toolbar.className='quest-editor-toolbar';toolbar.append(nav);const actions=document.createElement('div');actions.className='quest-save-actions';actions.innerHTML='<button class="btn" type="button" data-quest-save>Salvar</button><button class="btn ghost small" type="button" data-quest-read>Ler ficha</button><span class="subtle" data-quest-save-status role="status" aria-live="polite">Alterações da missão</span>';toolbar.append(actions);editor.prepend(toolbar);root.querySelector('[data-open-quest-rewards]')?.remove();activate(editor,activeEditors.get(state.page)??'story');
 }
 
 export function attachQuestSave(root,{state,toast,campaignOffice,questRewards,questCertificates}){
@@ -52,6 +56,7 @@ export function attachQuestSave(root,{state,toast,campaignOffice,questRewards,qu
  async function save(){
   const editor=root.querySelector('.quest-tabbed-editor');if(!editor||state.busy||state.questSaving)return;
   for(const form of editor.querySelectorAll(draftForms))if(!form.reportValidity())return;
+  if(editor.dataset.editorNew==='true'){await campaignOffice.createDraft(root);return;}
   try{questRewards.validateDraft();}catch(e){reveal(e.questForm);e.questForm?.querySelector('[role=alert]')?.focus();return;}
   const path=state.page,csrf=state.session.csrf,grid=editor.querySelector('.workshop-editor'),button=editor.querySelector('[data-quest-save]');
   state.questSaving=true;state.busy=true;failed=false;button.disabled=true;button.setAttribute('aria-busy','true');grid.inert=true;enhance();
@@ -70,5 +75,5 @@ export function attachQuestSave(root,{state,toast,campaignOffice,questRewards,qu
 export function attachEditorTabs(root){
   root.addEventListener('click',e=>{const open=e.target.closest('[data-open-quest-rewards]');if(open){const editor=root.querySelector('.quest-tabbed-editor');if(editor){activate(editor,'rewards');editor.querySelector('[data-editor-tab=rewards]').focus();}return;}const tab=e.target.closest('[data-editor-tab]');if(tab)activate(tab.closest('.quest-tabbed-editor'),tab.dataset.editorTab);});
   root.addEventListener('keydown',e=>{const tab=e.target.closest('[data-editor-tab]');if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const editor=tab.closest('.quest-tabbed-editor'),buttons=[...editor.querySelectorAll('[data-editor-tab]')],index=buttons.indexOf(tab),next=buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowLeft'?-1:1)+buttons.length)%buttons.length];activate(editor,next.dataset.editorTab);next.focus();});
-  root.addEventListener('invalid',e=>{const editor=e.target.closest('.quest-tabbed-editor'),panel=e.target.closest('[data-editor-panel]');if(!editor||!panel)return;activate(editor,panel.dataset.editorPanel.split(' ')[0]);let details=e.target.closest('details');while(details){details.open=true;details=details.parentElement.closest('details');}},true);
+  root.addEventListener('invalid',e=>{const editor=e.target.closest('.quest-tabbed-editor'),panel=e.target.closest('[data-editor-panel]');if(!editor||!panel)return;editor.classList.remove('quest-read-mode');const read=editor.querySelector('[data-quest-read]');if(read)read.textContent='Ler ficha';activate(editor,panel.dataset.editorPanel.split(' ')[0]);let details=e.target.closest('details');while(details){details.open=true;details=details.parentElement.closest('details');}},true);
 }

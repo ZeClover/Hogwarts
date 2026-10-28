@@ -306,6 +306,7 @@ function render() {
   organizeItemFields(root);
   enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);
+  campaignOffice.enhanceSheet();
   questRewards.mount(root);
   questCertificates.mount(root);
   enhanceSimplicity(root,state,{api,button,esc});
@@ -389,7 +390,7 @@ window.addEventListener('popstate',async event=>{
 });
 async function checkAuthContext(){
   state.authOrigin=null;
-  try{const response=await fetch('/api/auth/context',{credentials:'same-origin',signal:window.AbortSignal.timeout(15000)});if(!response.ok){state.authContextProblem=`O servidor de acesso está indisponível (HTTP ${response.status}). Tente novamente em instantes.`;return;}const {origin}=await response.json(),parsed=new URL(origin);if(!['http:','https:'].includes(parsed.protocol)||parsed.origin!==origin)throw new Error('invalid-context');state.authOrigin=origin;state.authContextProblem=null;}
+  try{const response=await fetch('/api/auth/context',{credentials:'same-origin',signal:window.AbortSignal.timeout(15000)});if(!response.ok){const messages={CONFIGURATION_MISSING:'A configuração da hospedagem está incompleta.',CONFIGURATION_INVALID:'A configuração da hospedagem precisa ser corrigida.',DATABASE_MIGRATIONS:'O banco da campanha precisa ser atualizado antes do acesso.',DATABASE_CONNECTION:'O servidor não conseguiu conectar ao banco da campanha.',APPLICATION_INITIALIZATION:'A aplicação da campanha não conseguiu iniciar.'};let problem;try{problem=await response.json();}catch{/* Platform errors can be HTML. */}state.authContextProblem=messages[problem?.code]?`${messages[problem.code]} Código: ${problem.code}.${problem.code==='CONFIGURATION_MISSING'&&Array.isArray(problem.missing)?' Faltam: '+problem.missing.filter(name=>['APP_ORIGIN','TURSO_DATABASE_URL','TURSO_AUTH_TOKEN','BACKUP_ENCRYPTION_KEY','HOGWARTS_STORAGE_PREFIX','BLOB_READ_WRITE_TOKEN'].includes(name)).join(', ')+'.':''}`:`O servidor de acesso está indisponível (HTTP ${response.status}). Tente novamente em instantes.`;return;}const {origin}=await response.json(),parsed=new URL(origin);if(!['http:','https:'].includes(parsed.protocol)||parsed.origin!==origin)throw new Error('invalid-context');state.authOrigin=origin;state.authContextProblem=null;}
   catch(e){state.authContextProblem=e.name==='TimeoutError'?'O servidor demorou a responder à verificação de acesso. Tente novamente em instantes.':'Não foi possível conectar ao servidor para verificar o acesso. Tente novamente em instantes.';}
 }
 root.addEventListener('click',async e=>{const button=e.target.closest('[data-auth-retry]');if(!button)return;button.disabled=true;button.textContent='Verificando…';try{await boot();}finally{if(button.isConnected){button.disabled=false;button.textContent='Tentar novamente';}}});

@@ -5,7 +5,7 @@ import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {fixture} from './helpers.mjs';
-import {settleAnimations,openPolicy} from './browser-helpers.mjs';
+import {settleAnimations,openPolicy,selectEditorStep} from './browser-helpers.mjs';
 let f;
 test.use({actionTimeout:10000});
 test.beforeAll(async()=>{f=await fixture();});test.afterAll(async()=>{await f?.close();});
@@ -14,24 +14,24 @@ async function accessible(page){await settleAnimations(page);const result=await 
 
 test('missão só com título mantém campos entre abas, política privada e publicação separada',async({page})=>{
  await login(page);await page.goto(f.config.origin+'/portal/mestre/oficinas/missoes/novo');
- await expect(page.locator('[type=checkbox]')).toHaveCount(0);await expect(page.locator('[type=file]:visible')).toHaveCount(0);await expect(page.getByRole('button',{name:'Adicionar imagem',exact:true})).toBeVisible();
- await officeAction(page.getByLabel('Título',{exact:true}),'fill','MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await officeAction(help.locator('summary'),'click');await expect(page.getByLabel('Título',{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await officeAction(page.getByLabel('Tipo',{exact:true}),'selectOption','Missão de grupo');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await officeAction(help.locator('summary'),'click');await expect(page.getByLabel('Tipo',{exact:true})).toHaveValue('Missão de grupo');await officeSubmit(page.getByRole('button',{name:'Criar rascunho',exact:true,includeHidden:true}));
+ await expect(page.getByRole('tab')).toHaveCount(7);await expect(page.locator('[type=file]:visible')).toHaveCount(0);
+ await officeAction(page.getByLabel(/^(Título|Nome da missão)$/,{exact:true}),'fill','MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await officeAction(help.locator('summary'),'click');await expect(page.getByLabel(/^(Título|Nome da missão)$/,{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await officeAction(page.getByLabel('Tipo de missão',{exact:true}),'selectOption','Secundária');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await officeAction(help.locator('summary'),'click');await expect(page.getByLabel('Tipo de missão',{exact:true})).toHaveValue('Secundária');await officeSubmit(page.getByRole('button',{name:'Criar rascunho',exact:true,includeHidden:true}));
  await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();
  const id=new URL(page.url()).pathname.split('/').pop();
- await expect(page.getByRole('tab')).toHaveCount(9);
- await officeAction(page.getByLabel('Título',{exact:true}),'fill','MISSÃO EDITADA NA FIXTURE');
- await officeAction(page.getByRole('tab',{name:'NPCs/locais',exact:true}),'click');await officeAction(page.getByLabel('Gancho público',{exact:true}),'fill','Texto preparado sem publicar.');
+ await expect(page.getByRole('tab')).toHaveCount(7);
+ await officeAction(page.getByLabel(/^(Título|Nome da missão)$/,{exact:true}),'fill','MISSÃO EDITADA NA FIXTURE');
+ await officeAction(page.getByRole('tab',{name:'Identificação',exact:true,includeHidden:true}),'click');await officeAction(page.getByLabel('Gancho público',{exact:true}),'fill','Texto preparado sem publicar.');
  expect((await f.master.request('/api/master/campaign/quests/'+id)).value.payload.title).toBe('MISSÃO RÁPIDA DA FIXTURE');
  await openPolicy(page);await officeAction(page.getByLabel('Público',{exact:true}),'selectOption','ALL');
  await saveDraft(page);await expect(page.locator('#toast')).toContainText('Alterações salvas.');
  const saved=(await f.master.request('/api/master/campaign/quests/'+id)).value;
  expect(saved.status).toBe('DRAFT');expect(saved.payload.title).toBe('MISSÃO EDITADA NA FIXTURE');expect(saved.payload.hook).toBe('Texto preparado sem publicar.');
  expect((await f.atlas.request('/api/campaign/quests')).value.items).toEqual([]);
- await officeAction(page.getByRole('tab',{name:'História',exact:true}),'focus');await page.keyboard.press('ArrowRight');await expect(page.getByRole('tab',{name:'NPCs/locais',exact:true})).toBeFocused();
- await page.keyboard.press('End');await expect(page.getByRole('tab',{name:'Publicação',exact:true})).toBeFocused();
+ await officeAction(page.getByRole('tab',{name:'Identificação',exact:true,includeHidden:true}),'focus');await page.keyboard.press('ArrowRight');await expect(page.getByRole('tab',{name:'Descrição e Objetivos',exact:true})).toBeFocused();
+ await page.keyboard.press('End');await expect(page.getByRole('tab',{name:'Consequências',exact:true})).toBeFocused();
  const before=f.db.prepare('SELECT count(*) n FROM audit_log').get().n;
  const characters=(await f.master.request('/api/master/state')).value.characters.map(c=>c.id);expect(characters).toHaveLength(5);
- for(const character of characters){
+ await selectEditorStep(page,'Identificação');for(const character of characters){
   await officeAction(page.getByLabel('Personagem da prévia',{exact:true}),'selectOption',character);await officeAction(page.getByRole('button',{name:'Conferir leitura',exact:true,includeHidden:true}),'click');await expect(page.locator('#campaign-preview-result')).toContainText('Ainda não integra o Diário');
  }
  expect(f.db.prepare('SELECT count(*) n FROM audit_log').get().n).toBe(before);
