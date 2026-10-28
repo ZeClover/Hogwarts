@@ -152,7 +152,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
-  if(state.rewardDirty)return;
+  if(state.rewardDirty||state.objectiveDirty)return;
   if(!force&&!changed&&creations.handles(state.page))return;
   if(!force&&!changed&&!state.dirty&&archivesOffice.handles(state.page)){return;}
   if(!force&&!changed&&!state.dirty&&investigationsOffice.handles(state.page)){await investigationsOffice.poll();return;}
@@ -286,6 +286,7 @@ function journeyTrail(){
 }
 function render() {
   delivery.sync();
+  campaignOffice.sync();
   if(!state.session){questRewards.mount(root);document.documentElement.dataset.house='master';root.innerHTML=authPage();return;}
   if(!state.portal)return;
   document.documentElement.dataset.house=state.portal.character?.house??'master';
@@ -323,7 +324,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',event=>{if(event.target.closest('[data-quest-rewards]'))return;if(!event.target.closest('[data-workshop-form="office-search"],[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
+root.addEventListener('input',event=>{if(event.target.closest('[data-quest-rewards],[data-campaign-form="inline-objective"]'))return;if(!event.target.closest('[data-workshop-form="office-search"],[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}
