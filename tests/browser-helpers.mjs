@@ -31,5 +31,5 @@ export async function openDisclosure(page,title){
 export async function dismissIncidentalDiscoveries(page,keepClues=false){
  if(page.__discoveryDismissal)return;page.__discoveryDismissal=true;
  const overlay=page.locator('.reveal-dialog:has([data-reveal-close])'+(keepClues?':not(:has-text("NOVA PISTA"))':''));
- await page.addLocatorHandler(overlay,async dialog=>{await dialog.locator('[data-reveal-close]').click();},{noWaitAfter:true});
+ await page.addLocatorHandler(overlay,async dialog=>{try{await dialog.locator('[data-reveal-close]').click({timeout:3000});}catch(error){if(await dialog.isVisible())throw error;}},{noWaitAfter:true});
 }
