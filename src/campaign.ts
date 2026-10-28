@@ -1,3 +1,4 @@
+import {validateQuestSheet, assignQuestCode, type QuestSheet} from './quest-sheet.ts';
 import { filterAsync, flatMapAsync, forEachAsync, mapAsync } from './async-array.ts';
 import { contentAllowed } from './content.ts';
 import { knownAcademicYear } from './calendar-model.ts';
@@ -26,6 +27,7 @@ type Payload = {
     cluesFollowMission?: boolean;
 };
 type Internal = {
+    sheet?: QuestSheet;
     synopsis: string;
     importance: string;
     releaseConditions: string;
@@ -95,10 +97,11 @@ async function validatePayload(db: DB, value: unknown): Promise<Payload> {
     return { title: text(p.title, 120), summary: text(p.summary, 3000, false), kind: text(p.kind, 80, false), academicYear: String(p.academicYear ?? ''),
         fileId: await optional(db, p.fileId, 'workshop_files'), alt: text(p.alt, 300, false), npcId: await optional(db, p.npcId, 'npcs'), locationId: await optional(db, p.locationId, 'locations'), hook: text(p.hook, 2000, false), ...(p.cluesFollowMission === undefined ? {} : {cluesFollowMission:p.cluesFollowMission}) };
 }
-function validatePrivate(value: unknown): Internal {
+async function validatePrivate(db: DB, value: unknown, previous?: Internal): Promise<Internal> {
     const p = record(value);
-    fields(p, ['synopsis', 'importance', 'releaseConditions', 'notes']);
-    return { synopsis: text(p.synopsis, 4000, false), importance: text(p.importance, 200, false), releaseConditions: text(p.releaseConditions, 2000, false), notes: text(p.notes, 2000, false) };
+    fields(p, ['synopsis', 'importance', 'releaseConditions', 'notes', 'sheet']);
+    const sheet=await validateQuestSheet(db,p.sheet,previous?.sheet);
+    return { ...(sheet?{sheet}:{}), synopsis: text(p.synopsis, 4000, false), importance: text(p.importance, 200, false), releaseConditions: text(p.releaseConditions, 2000, false), notes: text(p.notes, 2000, false) };
 }
 function ready(p: {
     fileId: string | null;
@@ -173,7 +176,7 @@ async function project(db: DB, viewer: Viewer, domain: Domain, row: Row, { draft
 }
 async function create(db: DB, domain: Domain, actor: Session, data: Record<string, unknown>) {
     fields(data, domain === 'quests' ? ['payload', 'policy', 'private'] : ['payload', 'policy', 'private', 'protagonistId']);
-    const p = await validatePayload(db, data.payload), rules = await validatePolicy(db, data.policy), internal = validatePrivate(data.private), id = randomUUID();
+    const p = await validatePayload(db, data.payload), rules = await validatePolicy(db, data.policy), internal = await validatePrivate(db,data.private), id = randomUUID();
     const protagonist = domain === 'stories' ? text(data.protagonistId, 100) : null;
     if (protagonist)
         await exists(db, 'characters', protagonist);
@@ -181,6 +184,7 @@ async function create(db: DB, domain: Domain, actor: Session, data: Record<strin
         const columns = domain === 'stories' ? ',protagonist_id' : '', placeholder = domain === 'stories' ? ',?' : '';
         await db.prepare(`INSERT INTO ${table(domain)}(id,owner_user_id,draft_json,draft_policy_json,private_json${columns}) VALUES(?,?,?,?,?${placeholder})`)
             .run(id, actor.userId, JSON.stringify(p), JSON.stringify(rules), JSON.stringify(internal), ...(protagonist ? [protagonist] : []));
+        if(domain==='quests'){internal.sheet=await assignQuestCode(db,p.kind,{...internal.sheet,code:''});await db.prepare('UPDATE quests SET private_json=? WHERE id=?').run(JSON.stringify(internal),id);}
         const row = await get(db, domain, id);
         await revision(db, domain, row, actor, 'CREATED');
         return await adminDTO(db, domain, row);
@@ -193,7 +197,7 @@ async function save(db: DB, domain: Domain, actor: Session, id: string, data: Re
         expected(before, data.version);
         if (before.status === 'ARCHIVED')
             fail(409, 'Restaure o registro antes de editar.');
-        const p = await validatePayload(db, data.payload), rules = await validatePolicy(db, data.policy), internal = validatePrivate(data.private);
+        const p = await validatePayload(db, data.payload), rules = await validatePolicy(db, data.policy), internal = await validatePrivate(db,data.private,privateData(before));
         if (domain==='quests' && p.cluesFollowMission===undefined && payload(before).cluesFollowMission!==undefined) p.cluesFollowMission=payload(before).cluesFollowMission;
         if (domain === 'stories') {
             const protagonist = text(data.protagonistId, 100);
@@ -204,6 +208,7 @@ async function save(db: DB, domain: Domain, actor: Session, id: string, data: Re
         }
         await db.prepare(`UPDATE ${table(domain)} SET draft_json=?,draft_policy_json=?,private_json=?,version=version+1,status=CASE WHEN status='PREPARED' THEN 'DRAFT' ELSE status END,updated_at=? WHERE id=?`)
             .run(JSON.stringify(p), JSON.stringify(rules), JSON.stringify(internal), now(), id);
+        if(domain==='quests'){internal.sheet=await assignQuestCode(db,p.kind,internal.sheet);await db.prepare('UPDATE quests SET private_json=? WHERE id=?').run(JSON.stringify(internal),id);}
         const row = await get(db, domain, id);
         await revision(db, domain, row, actor, 'SAVED');
         return await adminDTO(db, domain, row);
@@ -264,6 +269,7 @@ async function duplicate(db: DB, domain: Domain, actor: Session, id: string, dat
         p.title = `${p.title.slice(0, 110)} — cópia`;
         await db.prepare(`INSERT INTO ${table(domain)}(id,owner_user_id,draft_json,draft_policy_json,private_json${domain === 'stories' ? ',protagonist_id' : ''}) VALUES(?,?,?,?,?${domain === 'stories' ? ',?' : ''})`)
             .run(copyId, actor.userId, JSON.stringify(p), String(before.draft_policy_json), String(before.private_json), ...(domain === 'stories' ? [String(before.protagonist_id)] : []));
+        if(domain==='quests'){const internal=privateData(before);internal.sheet=await assignQuestCode(db,p.kind,{...internal.sheet,code:''});await db.prepare('UPDATE quests SET private_json=? WHERE id=?').run(JSON.stringify(internal),copyId);}
         if (domain === 'quests')
             for (const kind of ['objectives', 'clues'] as const)
                 for (const e of await definitions(db, id, kind))
@@ -410,7 +416,15 @@ async function revealEntry(db: DB, actor: Session, id: string, revoke: boolean, 
     });
 }
 async function list(db: DB, domain: Domain, url: URL, viewer?: Viewer, announcement = false) {
-    const q = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase('pt-BR').slice(0, 120), status = url.searchParams.get('status'), kind = url.searchParams.get('kind');
+    const q = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase('pt-BR').slice(0, 120), status = url.searchParams.get('status'), kind = url.searchParams.get('kind'), schoolYear=url.searchParams.get('schoolYear'), planningStatus=url.searchParams.get('planningStatus');
+    if(!viewer&&domain==='quests'){
+        // Filter small metadata rows first; do not load every long private sheet or
+        // compose hundreds of objective/clue projections for one page of results.
+        const metadata=await all(db, `SELECT id,status,operation_state,draft_json,json_extract(private_json,'$.sheet.code') sheet_code,json_extract(private_json,'$.sheet.schoolYear') sheet_year,json_extract(private_json,'$.sheet.planningStatus') sheet_status,EXISTS(SELECT 1 FROM quest_participants p WHERE p.quest_id=quests.id AND p.active=1 AND p.state='IN_PROGRESS') ongoing FROM quests ORDER BY updated_at DESC,id`);
+        const matches=metadata.filter(row=>{const p=payload(row);return !(q&&!`${p.title} ${row.sheet_code??row.id} ${p.summary} ${p.hook}`.toLocaleLowerCase('pt-BR').includes(q)||status&&row.status!==status||kind&&p.kind!==kind||schoolYear&&row.sheet_year!==schoolYear||planningStatus&&row.sheet_status!==planningStatus||url.searchParams.get('active')==='1'&&(row.operation_state==='CLOSED'||!row.ongoing));});
+        const requested=Number(url.searchParams.get('page')??1),page=Number.isInteger(requested)&&requested>0&&requested<=1000000?requested:1;
+        return {items:await mapAsync(matches.slice((page-1)*12,page*12),async row=>await adminDTO(db,domain,await get(db,domain,String(row.id)))),total:matches.length,page,pageSize:12};
+    }
     const rows = await flatMapAsync((await all(db, `SELECT * FROM ${table(domain)} ORDER BY updated_at DESC,id`)), async (row) => {
         if (viewer && !(announcement ? await canAnnounce(db, viewer, row) : await canRead(db, viewer, domain, row)))
             return [];
@@ -421,7 +435,7 @@ async function list(db: DB, domain: Domain, url: URL, viewer?: Viewer, announcem
             title: string;
             text: string;
         }> = publicValue && 'entries' in publicValue && Array.isArray(publicValue.entries) ? publicValue.entries : [];
-        if ((q && !`${p.title} ${p.summary} ${p.hook} ${known.map(e => e.title + ' ' + e.text).join(' ')}`.toLocaleLowerCase('pt-BR').includes(q)) || (!viewer && status && row.status !== status) || (kind && p.kind !== kind))
+        if ((q && !`${p.title} ${!viewer?privateData(row).sheet?.code??row.id:''} ${p.summary} ${p.hook} ${known.map(e => e.title + ' ' + e.text).join(' ')}`.toLocaleLowerCase('pt-BR').includes(q)) || (!viewer && status && row.status !== status) || (kind && p.kind !== kind)||(!viewer&&schoolYear&&privateData(row).sheet?.schoolYear!==schoolYear)||(!viewer&&planningStatus&&privateData(row).sheet?.planningStatus!==planningStatus))
             return [];
         return [value];
     });
@@ -670,7 +684,7 @@ export async function handleCampaign(req: IncomingMessage, res: ServerResponse, 
         if (url.searchParams.has('view_as'))
             fail(403, 'Saia da visualização para administrar.');
         if (path === '/api/master/campaign/context' && method === 'GET') {
-            send(res, 200, { collections: (await all(db, "SELECT id,draft_json FROM content_records WHERE kind IN('chocolatecards','bestiary','rarities','memories','curiosities')")).map(r => ({ id: r.id, name: JSON.parse(String(r.draft_json)).title })), npcs: (await all(db, 'SELECT id,status,draft_json FROM npcs ORDER BY id')).map(r => ({ id: r.id, status: r.status, name: JSON.parse(String(r.draft_json)).name })) });
+            send(res, 200, { collections: (await all(db, "SELECT id,draft_json FROM content_records WHERE kind IN('chocolatecards','bestiary','rarities','memories','curiosities')")).map(r => ({ id: r.id, name: JSON.parse(String(r.draft_json)).title })), npcs: (await all(db, 'SELECT id,status,draft_json FROM npcs ORDER BY id')).map(r => ({ id: r.id, status: r.status, name: JSON.parse(String(r.draft_json)).name, image: JSON.parse(String(r.draft_json)).portraitFileId?'/api/master/workshop/files/'+JSON.parse(String(r.draft_json)).portraitFileId:null })), items:(await all(db,'SELECT id,status,draft_json FROM catalog_items ORDER BY id')).map(r=>({id:r.id,status:r.status,name:JSON.parse(String(r.draft_json)).name,image:JSON.parse(String(r.draft_json)).fileId?'/api/master/workshop/files/'+JSON.parse(String(r.draft_json)).fileId:null})) });
             return true;
         }
         const match = path.match(/^\/api\/master\/campaign\/(quests|stories)(?:\/([\w-]+))?(?:\/(history|preview|preview-image|prepare|publish|duplicate|archive|restore|release|revoke|start|entries|reorder|reveal-entry|revoke-entry|objectives|clues|reorder-objectives|reorder-clues|objective-state|reveal-clue|revoke-clue|close|reopen))?$/);
@@ -682,7 +696,7 @@ export async function handleCampaign(req: IncomingMessage, res: ServerResponse, 
                     return true;
                 }
                 if (method === 'POST') {
-                    send(res, 201, await create(db, domain, actor, await jsonBody(req, 131072)));
+                    send(res, 201, await create(db, domain, actor, await jsonBody(req, 2*1024*1024)));
                     return true;
                 }
             }
@@ -693,7 +707,7 @@ export async function handleCampaign(req: IncomingMessage, res: ServerResponse, 
                     return true;
                 }
                 if (!action && method === 'PATCH') {
-                    send(res, 200, await save(db, domain, actor, id, await jsonBody(req, 131072)));
+                    send(res, 200, await save(db, domain, actor, id, await jsonBody(req, 2*1024*1024)));
                     return true;
                 }
                 if (action === 'history' && method === 'GET') {

@@ -9,6 +9,7 @@ export async function settleAnimations(page) {
 }
 
 export async function selectEditorStep(page,name){
+  if(/^\/portal\/mestre\/oficinas\/missoes\/[^/]+/.test(new URL(page.url()).pathname))name=({'História':'Identificação','NPCs/locais':'Identificação','Objetivos':'Descrição e Objetivos','Pistas':'Desenvolvimento','Participantes':'Identificação','Certificados':'Recompensas','Publicação':'Identificação'})[name]??name;
   const tab=page.getByRole('tab',{name,exact:true});
   const path=new URL(page.url()).pathname;
   if(/^\/portal\/mestre\/oficinas\/missoes\/(?!novo(?:\/|$))[^/]+(?:\/|$)/.test(path)){await tab.waitFor({state:'visible'});await tab.click();}
@@ -26,15 +27,18 @@ export async function openPolicy(page){
 
 // Secondary sections retain their state after saving. Open them only if closed.
 export async function openDisclosure(page,title){
+ if(title==='Planejamento privado do Mestre'&&await page.locator('[data-quest-sheet]').count())title='Textos dos jogadores e dados anteriores';
  const summary=page.getByText(title,{exact:true}).and(page.locator('summary'));
  await revealOfficeField(page,summary);
  if(!await summary.evaluate(el=>el.closest('details')?.open??false))await summary.click();
 }
 export async function revealOfficeField(page,field){
+ const questPanel=await field.evaluate(el=>el.closest('[data-editor-panel]')?.dataset.editorPanel.split(' ')[0]);if(questPanel&&await page.locator('[data-quest-sheet]').count())await page.locator('[data-editor-tab="'+questPanel+'"]').click();
  const chain=await field.evaluate(el=>{const rows=[];for(let node=el;node;node=node.parentElement){if(node.dataset.officePanel){const owner=node.closest('.office-tabbed-editor');if(owner)rows.push({key:owner.dataset.officeKey,panel:node.dataset.officePanel.split(' ')[0]});}}return rows.reverse();});
  for(const row of chain){const editors=page.locator('.office-tabbed-editor').filter({has:page.locator('[data-office-tab="'+row.panel+'"]')});const editor=editors.filter({has:page.locator('[data-office-tab]')});const matching=await editor.evaluateAll((nodes,key)=>nodes.findIndex(n=>n.dataset.officeKey===key),row.key);if(matching>=0)await editor.nth(matching).locator(':scope>.office-editor-toolbar [data-office-tab="'+row.panel+'"]').click();}
+ const parents=await field.evaluate(el=>{const rows=[],all=Array.from(document.querySelectorAll('details'));for(let node=el.parentElement;node;node=node.parentElement)if(node.matches('details')&&!(el.matches('summary')&&node===el.parentElement))rows.unshift(all.indexOf(node));return rows;});for(const index of parents){const details=page.locator('details').nth(index);if(!await details.evaluate(el=>el.open))await details.locator(':scope>summary').click();}
 }
-export async function officeAction(target,method,...args){await revealOfficeField(target.page(),target);return target[method](...args);}
+export async function officeAction(target,method,...args){if(await target.count()===0&&target.toString().includes('Usar criação avançada')&&await target.page().locator('[data-quest-sheet]').count())return;await revealOfficeField(target.page(),target);return target[method](...args);}
 export async function officeSubmit(target){const page=target.page(),unified=page.getByRole('button',{name:'Salvar',exact:true});if(await unified.count())return unified.click();return target.click();}
 
 // Regression flows dismiss the new discovery overlay through its real UI.

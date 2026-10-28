@@ -5,6 +5,8 @@ import {once} from 'node:events';
 import handler from '../api/index.mjs';
 import {createHostedHandler} from '../dist/hosted-handler.js';
 import {fixture} from './helpers.mjs';
+import {StartupProblem} from '../dist/startup-problem.js';
+import {hostedConfiguration} from '../dist/hosted-config.js';
 
 async function serve(listener){
  const server=createServer(listener);server.listen(0,'127.0.0.1');await once(server,'listening');
@@ -13,6 +15,13 @@ async function serve(listener){
 
 test('entrada da Vercel exporta função sem abrir banco ao importar',()=>{
  assert.equal(typeof handler,'function');
+});
+
+test('configuração ausente identifica somente nomes de variáveis e preserva o bloqueio de acesso',async t=>{
+ const previous=process.env.APP_ORIGIN;delete process.env.APP_ORIGIN;
+ try{assert.throws(()=>hostedConfiguration(),error=>error instanceof StartupProblem&&error.code==='CONFIGURATION_MISSING'&&error.missing.includes('APP_ORIGIN'));}finally{if(previous===undefined)delete process.env.APP_ORIGIN;else process.env.APP_ORIGIN=previous;}
+ t.mock.method(console,'error',()=>{});const proxy=await serve(createHostedHandler(async()=>{throw new StartupProblem('DATABASE_MIGRATIONS','O banco da campanha precisa ser atualizado antes do acesso.');}));
+ try{const response=await fetch(proxy.origin+'/api/auth/context');assert.equal(response.status,503);assert.deepEqual(await response.json(),{error:'O banco da campanha precisa ser atualizado antes do acesso.',code:'DATABASE_MIGRATIONS'});}finally{await proxy.close();}
 });
 
 test('handler da Vercel inicializa uma vez e atende origem, login, cookies e CSRF pelo servidor existente',async()=>{

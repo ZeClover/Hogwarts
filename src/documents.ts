@@ -30,6 +30,8 @@ type Certificate = {
     template?: TemplateSnapshot | null;
 };
 export type RewardPlan = {
+    quantity?: number;
+    moneyScope?: 'PER_PARTICIPANT' | 'GROUP';
     kind: string;
     referenceId: string | null;
     title: string;
@@ -182,12 +184,12 @@ registerReward('ITEM', { validate: async (db, p) => {
             effectsText?: string;
         };
         const description=[known.description,known.effectsText].filter(Boolean).join('\n\n');
-        await giveItem(db,actor.userId,character,p.referenceId!,1,'reward:'+commandKey,{title:known.name,description});
-        return { kind: 'ITEM', title: known.name, text: description, itemId: p.referenceId };
+        await giveItem(db,actor.userId,character,p.referenceId!,p.quantity??1,'reward:'+commandKey,{title:known.name,description});
+        return { kind: 'ITEM', title: known.name, text: description, itemId: p.referenceId, ...(p.quantity?{quantity:p.quantity}:{}) };
     } });
 async function validatePlan(db: DB, value: unknown): Promise<RewardPlan> {
     const p = record(value);
-    fields(p, ['kind', 'referenceId', 'title', 'text', 'nuques', 'characters']);
+    fields(p, ['kind', 'referenceId', 'title', 'text', 'nuques', 'characters', 'quantity', 'moneyScope']);
     const kind = text(p.kind, 40);
     if (!['ITEM', 'NARRATIVE', 'MONEY', 'COLLECTION', 'MEMORY'].includes(kind))
         fail(400, 'Tipo de recompensa inválido.');
@@ -197,7 +199,10 @@ async function validatePlan(db: DB, value: unknown): Promise<RewardPlan> {
     await forEachAsync(chars, async (id) => await exists(db, 'characters', id));
     if (typeof p.nuques !== 'number' || !Number.isSafeInteger(p.nuques) || p.nuques < 0 || p.nuques > 1e12)
         fail(400, 'Valor inválido.');
-    return { kind, referenceId: p.referenceId === null ? null : text(p.referenceId, 100), title: text(p.title, 180), text: text(p.text, 3000, false), nuques: p.nuques, characters: chars };
+    if(p.quantity!==undefined&&(kind!=='ITEM'||!Number.isSafeInteger(p.quantity)||Number(p.quantity)<1||Number(p.quantity)>999))fail(400,'Quantidade de itens inválida.');
+    if(p.moneyScope!==undefined&&(kind!=='MONEY'||!['PER_PARTICIPANT','GROUP'].includes(String(p.moneyScope))))fail(400,'Escolha o valor por participante ou pelo grupo.');
+    if(p.moneyScope==='GROUP'&&p.nuques<chars.length)fail(422,'O total do grupo deve permitir pelo menos um Nuque por beneficiário.');
+    return { kind, referenceId: p.referenceId === null ? null : text(p.referenceId, 100), title: text(p.title, 180), text: text(p.text, 3000, false), nuques: p.nuques, characters: chars, ...(p.quantity===undefined?{}:{quantity:Number(p.quantity)}),...(p.moneyScope===undefined?{}:{moneyScope:p.moneyScope as 'PER_PARTICIPANT'|'GROUP'}) };
 }
 async function adminPlan(db: DB, row: Row) { return { id: row.id, questId: row.quest_id, version: row.version, payload: JSON.parse(String(row.plan_json)), granted: !!row.granted, grants: (await all(db, 'SELECT id,character_id,receipt_json FROM reward_grants WHERE plan_id=?', String(row.id))).map(r => ({ id: r.id, characterId: r.character_id, receipt: JSON.parse(String(r.receipt_json)) })) }; }
 async function savePlan(db: DB, actor: Session, questId: string, data: Record<string, unknown>, id?: string) {
@@ -237,8 +242,9 @@ async function grant(db: DB, actor: Session, id: string, data: Record<string, un
         expected(row, data.version);
         const handler = handlers.get(p.kind) ?? fail(422, 'Esta concessão depende de uma oficina ainda não disponível.');
         await handler.validate(db, p);
-        for (const char of p.characters) {
-            const id = randomUUID(), receipt = await handler.apply(db, actor, p, char, String(row.id) + ':' + char);
+        for (const [index,char] of [...p.characters].sort().entries()) {
+            const effective=p.kind==='MONEY'&&p.moneyScope==='GROUP'?{...p,nuques:Math.floor(p.nuques/p.characters.length)+(index<p.nuques%p.characters.length?1:0)}:p;
+            const id = randomUUID(), receipt = await handler.apply(db, actor, effective, char, String(row.id) + ':' + char);
             await db.prepare('INSERT INTO reward_grants(id,plan_id,character_id,receipt_json,actor_id) VALUES(?,?,?,?,?)').run(id, String(row.id), char, JSON.stringify(receipt), actor.userId);
             if (!['ITEM','COLLECTION','MEMORY'].includes(p.kind)) await enqueueOnce(db, char, 'REWARD_GRANTED', id);
         }

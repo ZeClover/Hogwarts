@@ -47,6 +47,18 @@ A inicialização ocorre na primeira requisição e é compartilhada pelas requi
 
 Build, lint, 215 testes de servidor e seis cenários de navegador passaram. Os testes exercitam a entrada exportada, login, cookies, origem, recuperação após falha e o botão de repetir após HTTP 500. A consulta direta ao site e aos logs da Vercel continua indisponível neste ambiente, cuja política de rede não libera o domínio; o defeito reproduzido não exclui uma falha adicional de configuração ou banco na instalação real. Se o novo deploy responder 503, confira os logs da função, as variáveis e as migrations antes de modificar dados.
 
+O HTTP 503 posterior é tratado com códigos de diagnóstico. A tela de acesso mostra o código e, quando faltam variáveis, somente seus nomes. Nenhum valor privado ou mensagem bruta de SDK é retornado.
+
+| Código | Verificação na instalação real |
+| --- | --- |
+| `CONFIGURATION_MISSING` | Configurar as variáveis listadas no ambiente Production do projeto correto e fazer novo deploy. Preservar a chave de backup existente. |
+| `CONFIGURATION_INVALID` | Conferir origem HTTPS, persistência remota, formato da chave de backup e prefixo do armazenamento. |
+| `DATABASE_MIGRATIONS` | Fazer backup e aplicar as 22 migrations no banco existente com `npm run db:migrate`. Não usar o bootstrap de banco vazio sobre uma campanha. |
+| `DATABASE_CONNECTION` | Conferir URL do Turso, token, permissões, disponibilidade e acesso ao banco pela função. |
+| `APPLICATION_INITIALIZATION` | Conferir os arquivos incluídos no deploy e os logs da função com o marcador `HOGWARTS_STARTUP_FAILED`. |
+
+A configuração de Internet do ambiente Codex e um status Ready de build não validam esses recursos de produção. A resposta 503 continua bloqueando o acesso enquanto a dependência não estiver disponível; não existe fallback para banco vazio, senha alternativa ou liberação de autenticação.
+
 Em uma máquina autorizada, carregue as variáveis do ambiente desejado em `.env`, com acesso restrito ao arquivo. Primeiro faça backup do banco existente. Então execute:
 
 ```sh
