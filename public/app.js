@@ -1,3 +1,5 @@
+import {createOfficeTools} from '/office-tools.js';
+import {createOfficeEditors} from '/office-editors.js';
 import {createQuestCertificates} from '/quest-certificates.js';
 import {createQuestRewards} from '/quest-rewards.js';
 import {magicPaths,magicIcon,routeIcon} from '/magic-icons.js';
@@ -97,6 +99,8 @@ const questCertificates=createQuestCertificates({api,state,esc,toast});
 attachQuestSave(root,{state,toast,campaignOffice,questRewards,questCertificates});
 root.addEventListener('quest-editor-enhance',()=>imageGallery.enhance(root));
 const imageGallery=createImageGallery({api,state,esc,toast});
+const officeEditors=createOfficeEditors({root,state,toast,navigate,controllers:{npcOffice,itemOffice,workshop,contentOffice,campaignOffice,mailOffice,investigationsOffice},enhanceTools:(editor,config)=>officeTools.enhance(editor,config)});
+const officeTools=createOfficeTools({api,state,esc,label,empty,button,toast,root,getEditors:()=>officeEditors,imageGallery});
 const delivery=createDelivery({api,state,refresh,navigate,esc});
 function toast(message, error=false) {
   clearTimeout(toastTimer);
@@ -156,6 +160,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
+  officeEditors.sync();if((state.officeSaving||state.officeDirty)&&root.querySelector('.office-tabbed-editor')?.dataset.officeKey===state.page)return;
   if(state.questSaving||state.rewardDirty||state.objectiveDirty||state.clueDirty||state.certificateDirty)return;
   if(!force&&!changed&&creations.handles(state.page))return;
   if(!force&&!changed&&!state.dirty&&archivesOffice.handles(state.page)){return;}
@@ -184,7 +189,7 @@ function authPage() {
   const activate=location.pathname==='/ativar';
   const canonical=new URL(activate?'/ativar':'/entrar',state.authOrigin??location.origin);
   if(activate)canonical.hash=location.hash;
-  const accessNotice=!state.authOrigin?`<p role="status">Não foi possível conferir o endereço de acesso. Recarregue a página para tentar novamente.</p><a class="btn" href="${esc(activate?'/ativar'+location.hash:'/entrar')}">Tentar novamente</a>`:state.authOrigin!==location.origin?`<div class="auth-origin-note" role="status"><p>Este é um endereço temporário. Use o endereço principal para entrar na sua conta.</p><a class="btn" href="${esc(canonical.href)}" rel="noreferrer">Continuar no endereço principal</a></div>`:'';
+  const accessNotice=!state.authOrigin?`<p role="status">${esc(state.authContextProblem??'O servidor não respondeu à verificação de acesso. Tente novamente em instantes.')}</p><button class="btn" type="button" data-auth-retry>Tentar novamente</button>`:state.authOrigin!==location.origin?`<div class="auth-origin-note" role="status"><p>Este é um endereço temporário. Use o endereço principal para entrar na sua conta.</p><a class="btn" href="${esc(canonical.href)}" rel="noreferrer">Continuar no endereço principal</a></div>`:'';
   return `<main id="main" class="auth-shell" tabindex="-1"><section class="auth-art" aria-label="Castelo de Hogwarts à noite"><div class="auth-wordmark"><img src="/assets/hogwarts.webp" alt="Brasão de Hogwarts"><span>Hogwarts <small>ARQUIVOS MÁGICOS</small></span></div><div class="auth-story"><span class="eyebrow">ESCOLA DE MAGIA E BRUXARIA</span><h1>Há histórias que<br>pertencem a poucos.</h1><div class="gold-rule"></div><p>As suas esperam por você.</p><span class="auth-year">ANO LETIVO 1890–1891</span></div></section><section class="auth-form-panel"><div class="auth-form-inner"><span class="eyebrow">${activate?'UMA NOVA HISTÓRIA':'BEM-VINDO DE VOLTA'}</span><h2>${activate?'Seu lugar em Hogwarts':'Os arquivos aguardam'}</h2><p class="muted">${activate?'Use o e-mail do seu convite para criar sua conta.':'Entre para continuar a sua história.'}</p>${accessNotice||`<form data-form="${activate?'activate':'login'}"><label class="field">E-mail<input type="email" name="email" autocomplete="username" required maxlength="254" placeholder="Seu e-mail"></label><label class="field">${activate?'Crie uma senha':'Senha'}<input type="password" name="password" autocomplete="${activate?'new-password':'current-password'}" minlength="${activate?8:1}" maxlength="128" required placeholder="${activate?'Pelo menos 8 caracteres':'Sua senha'}"></label>${activate?'<p class="subtle">Seu convite é pessoal e pode ser utilizado uma única vez.</p>':''}<p class="form-error" role="alert"></p><button class="btn auth-submit" type="submit">${activate?'Aceitar convite':'Entrar nos arquivos'} ${ico('arrow',18)}</button></form>`}<div class="auth-note">${ico('lock',16)} Acesso privado por convite do Mestre.</div>${activate?'<a class="auth-link" href="/entrar">Já tem uma conta? Entrar</a>':''}<p class="auth-help">${activate?'O convite expirou? Peça um novo ao Mestre.':'Para acessar pela primeira vez ou recuperar seu acesso, fale com o Mestre.'}</p></div><span class="auth-bottom">HOGWARTS · 1890</span></section></main>`;
 }
 function header() {
@@ -304,6 +309,7 @@ function render() {
   questRewards.mount(root);
   questCertificates.mount(root);
   enhanceSimplicity(root,state,{api,button,esc});
+  officeEditors.enhance();officeEditors.sync();
 }
 async function preview(id) {
   if(state.session.role!=='MASTER')throw new Error('Acesso reservado ao Mestre.');
@@ -381,8 +387,14 @@ window.addEventListener('popstate',async event=>{
   state.view=new URLSearchParams(location.search).get('view_as');state.page=location.pathname;state.dirty=false;
   try{await refresh(true);requestAnimationFrame(()=>window.scrollTo({top:savedScroll,behavior:'instant'}));}catch(error){toast(error.message,true);}
 });
+async function checkAuthContext(){
+  state.authOrigin=null;
+  try{const response=await fetch('/api/auth/context',{credentials:'same-origin',signal:window.AbortSignal.timeout(15000)});if(!response.ok){state.authContextProblem=`O servidor de acesso está indisponível (HTTP ${response.status}). Tente novamente em instantes.`;return;}const {origin}=await response.json(),parsed=new URL(origin);if(!['http:','https:'].includes(parsed.protocol)||parsed.origin!==origin)throw new Error('invalid-context');state.authOrigin=origin;state.authContextProblem=null;}
+  catch(e){state.authContextProblem=e.name==='TimeoutError'?'O servidor demorou a responder à verificação de acesso. Tente novamente em instantes.':'Não foi possível conectar ao servidor para verificar o acesso. Tente novamente em instantes.';}
+}
+root.addEventListener('click',async e=>{const button=e.target.closest('[data-auth-retry]');if(!button)return;button.disabled=true;button.textContent='Verificando…';await boot();});
 async function boot() {
-  try{const {origin}=await api('/api/auth/context',{preview:false});const parsed=new URL(origin);if(['http:','https:'].includes(parsed.protocol)&&parsed.origin===origin)state.authOrigin=origin;}catch{/* Do not ask for a password until the destination can be checked. */}
+  await checkAuthContext();
   try{
     state.session=await api('/api/session',{preview:false});
     state.portal=await api('/api/state');
