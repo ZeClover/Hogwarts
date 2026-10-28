@@ -1,3 +1,4 @@
+import {saveDraft} from './browser-helpers.mjs';
 import {dismissIncidentalDiscoveries} from './browser-helpers.mjs';
 import {test,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -15,12 +16,12 @@ test('missão só com título mantém campos entre abas, política privada e pub
  await page.getByLabel('Título',{exact:true}).fill('MISSÃO RÁPIDA DA FIXTURE');const help=page.locator('[data-office-help] details');await expect(help).not.toHaveAttribute('open','');await help.locator('summary').click();await expect(page.getByLabel('Título',{exact:true})).toHaveValue('MISSÃO RÁPIDA DA FIXTURE');await page.getByLabel('Tipo',{exact:true}).selectOption('Missão de grupo');await page.screenshot({path:'/tmp/hogwarts-v5-help-creator.png',fullPage:true});await help.locator('summary').click();await expect(page.getByLabel('Tipo',{exact:true})).toHaveValue('Missão de grupo');await page.getByRole('button',{name:'Criar rascunho',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Editar missão',exact:true})).toBeVisible();
  const id=new URL(page.url()).pathname.split('/').pop();
- await expect(page.getByRole('tab')).toHaveCount(8);
+ await expect(page.getByRole('tab')).toHaveCount(9);
  await page.getByLabel('Título',{exact:true}).fill('MISSÃO EDITADA NA FIXTURE');
  await page.getByRole('tab',{name:'NPCs/locais',exact:true}).click();await page.getByLabel('Gancho público',{exact:true}).fill('Texto preparado sem publicar.');
  expect((await f.master.request('/api/master/campaign/quests/'+id)).value.payload.title).toBe('MISSÃO RÁPIDA DA FIXTURE');
  await openPolicy(page);await page.getByLabel('Público',{exact:true}).selectOption('ALL');
- await page.getByRole('button',{name:'Salvar rascunho',exact:true}).click();await expect(page.locator('#toast')).toContainText('Rascunho salvo.');
+ await saveDraft(page);await expect(page.locator('#toast')).toContainText('Alterações salvas.');
  const saved=(await f.master.request('/api/master/campaign/quests/'+id)).value;
  expect(saved.status).toBe('DRAFT');expect(saved.payload.title).toBe('MISSÃO EDITADA NA FIXTURE');expect(saved.payload.hook).toBe('Texto preparado sem publicar.');
  expect((await f.atlas.request('/api/campaign/quests')).value.items).toEqual([]);

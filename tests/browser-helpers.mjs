@@ -14,6 +14,10 @@ export async function selectEditorStep(page,name){
   if(/^\/portal\/mestre\/oficinas\/missoes\/(?!novo(?:\/|$))[^/]+(?:\/|$)/.test(path)){await tab.waitFor({state:'visible'});await tab.click();}
   else if(await tab.count())await tab.click();
 }
+export async function saveDraft(page){
+ const unified=page.getByRole('button',{name:'Salvar',exact:true});
+ await (await unified.count()?unified:page.getByRole('button',{name:'Salvar rascunho',exact:true})).click();
+}
 export async function openPolicy(page){
   await selectEditorStep(page,'Publicação');
   const details=page.locator('[data-compact-policy]').first();

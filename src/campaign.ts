@@ -23,6 +23,7 @@ type Payload = {
     npcId: string | null;
     locationId: string | null;
     hook: string;
+    cluesFollowMission?: boolean;
 };
 type Internal = {
     synopsis: string;
@@ -87,11 +88,12 @@ async function optional(db: DB, value: unknown, entity: 'locations' | 'workshop_
 }
 async function validatePayload(db: DB, value: unknown): Promise<Payload> {
     const p = record(value);
-    fields(p, ['title', 'summary', 'kind', 'academicYear', 'fileId', 'alt', 'npcId', 'locationId', 'hook']);
+    fields(p, ['title', 'summary', 'kind', 'academicYear', 'fileId', 'alt', 'npcId', 'locationId', 'hook', 'cluesFollowMission']);
+    if (p.cluesFollowMission !== undefined && typeof p.cluesFollowMission !== 'boolean') fail(400, 'Confira o acesso às pistas.');
     if (p.academicYear && !await knownAcademicYear(db, p.academicYear))
         fail(400, 'Selecione o ano letivo disponível.');
     return { title: text(p.title, 120), summary: text(p.summary, 3000, false), kind: text(p.kind, 80, false), academicYear: String(p.academicYear ?? ''),
-        fileId: await optional(db, p.fileId, 'workshop_files'), alt: text(p.alt, 300, false), npcId: await optional(db, p.npcId, 'npcs'), locationId: await optional(db, p.locationId, 'locations'), hook: text(p.hook, 2000, false) };
+        fileId: await optional(db, p.fileId, 'workshop_files'), alt: text(p.alt, 300, false), npcId: await optional(db, p.npcId, 'npcs'), locationId: await optional(db, p.locationId, 'locations'), hook: text(p.hook, 2000, false), ...(p.cluesFollowMission === undefined ? {} : {cluesFollowMission:p.cluesFollowMission}) };
 }
 function validatePrivate(value: unknown): Internal {
     const p = record(value);
@@ -192,6 +194,7 @@ async function save(db: DB, domain: Domain, actor: Session, id: string, data: Re
         if (before.status === 'ARCHIVED')
             fail(409, 'Restaure o registro antes de editar.');
         const p = await validatePayload(db, data.payload), rules = await validatePolicy(db, data.policy), internal = validatePrivate(data.private);
+        if (domain==='quests' && p.cluesFollowMission===undefined && payload(before).cluesFollowMission!==undefined) p.cluesFollowMission=payload(before).cluesFollowMission;
         if (domain === 'stories') {
             const protagonist = text(data.protagonistId, 100);
             await exists(db, 'characters', protagonist);
@@ -208,7 +211,8 @@ async function save(db: DB, domain: Domain, actor: Session, id: string, data: Re
 }
 async function bump(db: DB, domain: Domain, id: string) { await db.prepare(`UPDATE ${table(domain)} SET version=version+1,updated_at=? WHERE id=?`).run(now(), id); }
 async function command(db: DB, domain: Domain, actor: Session, id: string, action: string, data: Record<string, unknown>) {
-    fields(data, ['version']);
+    fields(data, action==='publish'&&domain==='quests'?['version','cluesFollowMission']:['version']);
+    if (data.cluesFollowMission !== undefined && data.cluesFollowMission !== true) fail(400, 'Confira o acesso às pistas.');
     return await transaction(db, async () => {
         const before = await get(db, domain, id);
         const previouslyVisible = action==='publish'&&domain==='quests'?await availableRecipients(db,'QUEST_AVAILABLE',id):[];
@@ -226,7 +230,10 @@ async function command(db: DB, domain: Domain, actor: Session, id: string, actio
         else if (action === 'prepare' || action === 'publish') {
             if (before.status === 'ARCHIVED')
                 fail(409, 'Restaure o registro antes de publicar.');
-            const p = await composed(db, domain, before);
+            if (action==='publish'&&data.cluesFollowMission===true) {
+                await db.prepare('UPDATE quests SET draft_json=? WHERE id=?').run(JSON.stringify({...payload(before),cluesFollowMission:true}),id);
+            }
+            const p = await composed(db, domain, data.cluesFollowMission===true?await get(db,domain,id):before);
             ready(p);
             (p.entries ?? []).forEach(ready);
             (p.clues ?? []).forEach(ready);
@@ -244,6 +251,7 @@ async function command(db: DB, domain: Domain, actor: Session, id: string, actio
         const row = await get(db, domain, id);
         await revision(db, domain, row, actor, action.toUpperCase());
         if (action === 'publish' && domain === 'quests') await notifyAvailable(db, 'QUEST_AVAILABLE', id, undefined, previouslyVisible);
+        if (action === 'publish' && domain === 'quests') await syncMissionClues(db, actor, row);
         return await adminDTO(db, domain, row);
     });
 }
@@ -305,6 +313,7 @@ async function questAccess(db: DB, actor: Session, id: string, action: string, d
         const row = await get(db, 'quests', id);
         await revision(db, 'quests', row, actor, action.toUpperCase());
         if (action === 'release') await notifyAvailable(db, 'QUEST_AVAILABLE', id, characters);
+        if (action === 'release') await syncMissionClues(db, actor, row);
         return await adminDTO(db, 'quests', row);
     });
 }
@@ -427,6 +436,21 @@ async function cover(db: DB, config: Config, res: ServerResponse, p: {
     await renderImage(db, config, res, { fileId: p.fileId, crop: { x: 0, y: 0, width: 100, height: 100 } }, false);
 }
 const objectiveStates = ['HIDDEN', 'REVEALED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED'];
+// The tabbed editor opts into clues inheriting the mission's published access.
+// Keep legacy individualized narratives intact until the master saves that choice.
+async function syncMissionClues(db: DB, actor: Session, row: Row) {
+    if (!row.published_json || !payload(row, true).cluesFollowMission) return;
+    for (const member of await participants(db, String(row.id))) {
+        const characterId=String(member.character_id), viewer:Viewer={userId:actor.userId,role:'PLAYER',characterId,preview:true};
+        if (!member.active || !await canRead(db, viewer, 'quests', row)) continue;
+        for (const clue of payload(row, true).clues ?? []) {
+            const eventId=await enqueueOnce(db, characterId, 'QUEST_CLUE', String(row.id), clue.id);
+            await db.prepare(`INSERT INTO quest_clue_reveals(quest_id,clue_id,character_id,snapshot_json,source_revision,actor_id,event_id) VALUES(?,?,?,?,?,?,?)
+              ON CONFLICT(quest_id,clue_id,character_id) DO UPDATE SET active=1,snapshot_json=excluded.snapshot_json,source_revision=excluded.source_revision,actor_id=excluded.actor_id,event_id=excluded.event_id`)
+                .run(String(row.id),clue.id,characterId,JSON.stringify(clue),Number(row.published_revision),actor.userId,eventId);
+        }
+    }
+}
 function publishedDefinition(row: Row, kind: 'objectives' | 'clues', id: string) { return (payload(row, true)[kind] ?? []).find(e => e.id === id); }
 async function clueRecord(db: DB, viewer: Viewer, row: Row, clueId: string) {
     if (!await canRead(db, viewer, 'quests', row))
@@ -435,7 +459,7 @@ async function clueRecord(db: DB, viewer: Viewer, row: Row, clueId: string) {
     if (!known)
         return null;
     const saved: Clue = JSON.parse(String(known.snapshot_json)), current = publishedDefinition(row, 'clues', clueId) as Clue | undefined;
-    return await policyAllows(db, viewer, current?.policy ?? saved.policy) ? { row: known, saved } : null;
+    return payload(row,true).cluesFollowMission || await policyAllows(db, viewer, current?.policy ?? saved.policy) ? { row: known, saved } : null;
 }
 async function publicOperations(db: DB, viewer: Viewer, row: Row) {
     if (!await canRead(db, viewer, 'quests', row))
@@ -554,6 +578,7 @@ async function revealClue(db: DB, actor: Session, id: string, revoke: boolean, d
     return await transaction(db, async () => {
         const before = await get(db, 'quests', id);
         expected(before, data.version);
+        if (before.published_json && payload(before,true).cluesFollowMission) fail(409, 'As pistas acompanham o acesso à missão. Edite e publique a missão para atualizar o grupo.');
         const clue = before.published_json ? publishedDefinition(before, 'clues', clueId) as Clue | undefined : undefined;
         if (!revoke) {
             if (before.status !== 'PUBLISHED' || before.operation_state === 'CLOSED' || !clue)
