@@ -30,7 +30,7 @@ export function enhanceSimplicity(root,state,{api,button,esc}){
  }
  const remembered=disclosureState.get(state.page);if(remembered)for(const d of root.querySelectorAll('details'))if(remembered.has(disclosureKey(d)))d.open=remembered.get(disclosureKey(d));
  // Editor-specific secondary tools stay within their owning flow.
- if(master&&state.page.includes('/shops/')){const title=root.querySelector('.workshop-title');if(title&&!root.querySelector('[data-shop-catalog]')){const id=state.page.split('/').pop();if(id!=='novo')void shopCatalog(root,id,state,{api,button,esc});}}
+ if(master&&state.page.includes('/shops/')&&!root.querySelector('[data-content-form="editor"]')){const title=root.querySelector('.workshop-title');if(title&&!root.querySelector('[data-shop-catalog]')){const id=state.page.split('/').pop();if(id!=='novo')void shopCatalog(root,id,state,{api,button,esc});}}
 }
 function hiddenInput(input){input.type='hidden';input.closest('.field')?.classList.add('sr-only');}
 async function mapControl(fields,state,api){

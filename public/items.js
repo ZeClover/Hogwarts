@@ -70,9 +70,9 @@ export function createItemOffice({api,esc,ico,label,empty,button,state,render,na
     const rows=[...document.querySelectorAll('.effect-row')];rows.forEach((row,index)=>{row.querySelector('.effect-position').textContent=String(index+1);row.querySelector('[data-item-action="effect-up"]').disabled=index===0;row.querySelector('[data-item-action="effect-down"]').disabled=index===rows.length-1;});
     const add=document.querySelector('[data-item-action="effect-add"]');if(add)add.disabled=rows.length>=12||current?.status==='ARCHIVED';
   }
-  async function submit(form){
+  async function submit(form,unified=false){
     if(state.busy)return;state.busy=true;const data=new FormData(form),kind=form.dataset.itemForm,err=form.querySelector('.form-error'),submit=form.querySelector('button[type="submit"]');
-    if(err)err.textContent='';submit.disabled=true;
+    if(err)err.textContent='';if(submit)submit.disabled=true;
     try{
       if(kind==='filters'){filters={q:String(data.get('q')??''),category:String(data.get('category')??''),status:String(data.get('status')??''),page:1};state.dirty=false;await load();render();return;}
       if(!admin())throw new Error('Acesso reservado ao Mestre.');
@@ -80,6 +80,7 @@ export function createItemOffice({api,esc,ico,label,empty,button,state,render,na
         const value=await api(`/api/master/workshop/items/${current.id}/preview?character=${encodeURIComponent(data.get('previewCharacter'))}&source=${data.get('previewSource')}`);
         document.querySelector('#item-preview-result').innerHTML=value.accessible?article(value.item,{preview:true}):empty('Este artigo não está disponível para o personagem selecionado.');return;
       }
+      const editingId=current?.id,editingVersion=current?.version,sourcePage=state.page;
       const internal=blankPrivate();for(const key of Object.keys(internal).filter(k=>!['effects','referenceValueNuques','chosenPriceNuques'].includes(k)))internal[key]=String(data.get(key)??'');
       internal.referenceValueNuques=moneyValue(data,'reference');internal.chosenPriceNuques=moneyValue(data,'price');
       internal.effects=[...form.querySelectorAll('.effect-row')].map(row=>Object.fromEntries([['id',row.dataset.effectId||null],...['name','description',...effectFields.map(([name])=>name)].map(key=>[key,row.querySelector(`[name="effect-${key}"]`).value])]));
@@ -87,9 +88,11 @@ export function createItemOffice({api,esc,ico,label,empty,button,state,render,na
       if(upload?.size){if(upload.size>2*1024*1024)throw new Error('Use uma imagem de até 2 MB.');fileId=(await api('/api/master/workshop/files',{method:'POST',body:upload,raw:true})).id;}
       else if(asset)fileId=(await api('/api/master/workshop/files',{method:'POST',body:{asset}})).id;
       const payload={name:data.get('name'),description:data.get('description'),effectsText:data.get('effectsText')??'',fileId,alt:data.get('alt'),crop:Object.fromEntries(['x','y','width','height'].map(key=>[key,Number(data.get('crop-'+key))]))};
-      const saved=await api('/api/master/workshop/items'+(current?'/'+current.id:''),{method:current?'PATCH':'POST',body:{...(current?{version:current.version}:{}),payload,policy:readPolicy(data),private:internal}});
+      if(state.page!==sourcePage)throw new Error('A página mudou durante o salvamento.');
+      const saved=await api('/api/master/workshop/items'+(editingId?'/'+editingId:''),{method:editingId?'PATCH':'POST',body:{...(editingId?{version:editingVersion}:{}),payload,policy:readPolicy(data),private:internal}});
+      if(unified){if(state.page!==sourcePage)return saved;current=saved;return saved;}
       state.dirty=false;await navigate(base+'/'+saved.id,true);numberEffects();toast('Rascunho salvo. Publique para atualizar o artigo disponível.');
-    }catch(e){err.textContent=e.message;err.focus();}finally{state.busy=false;submit.disabled=false;}
+    }catch(e){err.textContent=e.message;err.focus();if(unified){e.officeForm=form;throw e;}}finally{state.busy=false;if(submit)submit.disabled=false;}
   }
   function attach(root){
     root.addEventListener('submit',event=>{if(!(event.target instanceof HTMLFormElement)||!event.target.dataset.itemForm)return;event.preventDefault();void submit(event.target);});
@@ -122,5 +125,5 @@ export function createItemOffice({api,esc,ico,label,empty,button,state,render,na
     if(state.page===base||state.page===publicBase){const next=await api(`${state.page===base?'/api/master/workshop/items':'/api/workshop/items'}?${query()}`);if(JSON.stringify(next)!==JSON.stringify(list)){list=next;render();}}
     else if(state.page.startsWith(publicBase+'/')){try{const next=await api('/api/workshop/items/'+state.page.split('/').pop());if(JSON.stringify(next)!==JSON.stringify(current)){current=next;error=null;render();}}catch(e){if(error!==e.message){error=e.message;render();}}}
   }
-  return {handles,load,page,attach,poll};
+  return {handles,load,page,attach,poll,savedRecord:()=>current,saveDrafts:async(_root,forms)=>{for(const form of forms)await submit(form,true);return base+'/'+current.id;}};
 }

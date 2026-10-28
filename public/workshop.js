@@ -131,7 +131,7 @@ export function createWorkshop({api,esc,ico,label,empty,button,state,render,navi
     if(!value.accessible)return empty('Esta revisão não está disponível para o personagem selecionado.');
     const m=value.media;return `<article class="media-record preview-${m.presentation.toLowerCase()}"><img src="${esc(m.image)}" alt="${esc(m.alt)}"><div class="media-record-body"><h3 class="head3">${esc(m.title)}</h3><p>${esc(m.description)}</p><small class="muted">${esc(m.credit)}</small></div></article><p class="subtle">Somente leitura. A prévia não publica nem registra leitura.</p>`;
   }
-  async function submit(form){
+  async function submit(form,unified=false){
     if(state.busy)return;state.busy=true;
     const submit=form.querySelector('button[type="submit"]'),errorEl=form.querySelector('.form-error'),data=new FormData(form),kind=form.dataset.workshopForm;
     if(submit){submit.disabled=true;submit.setAttribute('aria-busy','true');}if(errorEl)errorEl.textContent='';
@@ -160,9 +160,11 @@ export function createWorkshop({api,esc,ico,label,empty,button,state,render,navi
       const policy=kind==='media-quick'?{...defaults(),audience:data.get('visibility')==='REVIEW'?'ALL':'SELECTED'}:readPolicy(data);
       const title=String(data.get('title')??'').trim()||(kind==='media-quick'?String(upload?.name||asset||'Imagem reutilizada').replace(/\.[^.]+$/,'').replaceAll('_',' ').slice(0,120):'');
       const payload=kind==='media-quick'?{title,description:'',alt:'',category:'SCENERY',credit:'',academicYear:context.currentAcademicYear,presentation:'SCENE',fileId,crop:{x:0,y:0,width:100,height:100}}:{title,description:data.get('description'),alt:data.get('alt'),category:data.get('category'),credit:data.get('credit'),academicYear:data.get('academicYear'),presentation:data.get('presentation'),fileId,crop:{x:Number(data.get('cropX')),y:Number(data.get('cropY')),width:Number(data.get('cropWidth')),height:Number(data.get('cropHeight'))}};
+      if(state.page!==sourcePage)throw new Error('A página mudou durante o salvamento.');
       const saved=await api(`/api/master/workshop/media${editingId?'/'+editingId:''}`,{method:editingId?'PATCH':'POST',preview:false,body:{...(editingId?{version:editingVersion}:{}),payload,policy,privateNotes:data.get('privateNotes')??''}});
+      if(unified){if(state.page!==sourcePage)return saved;current=saved;return saved;}
       if(state.page===sourcePage){state.dirty=false;await navigate(`${base}/midias/${saved.id}`,true);}toast('Rascunho salvo. A publicação é uma ação separada.');
-    }catch(e){if(errorEl){errorEl.textContent=e.message;errorEl.focus();}else toast(e.message,true);}
+    }catch(e){if(errorEl){errorEl.textContent=e.message;errorEl.focus();}else toast(e.message,true);if(unified){e.officeForm=form;throw e;}}
     finally{state.busy=false;if(submit){submit.disabled=false;submit.removeAttribute('aria-busy');}}
   }
   function attach(root){
@@ -206,5 +208,5 @@ export function createWorkshop({api,esc,ico,label,empty,button,state,render,navi
     const next=await api(`${path}?${queryString()}`);
     if(JSON.stringify(next)!==JSON.stringify(list)){list=next;render();}
   }
-  return {handles,load,page,attach,poll};
+  return {handles,load,page,attach,poll,savedRecord:()=>current,saveDrafts:async(_root,forms)=>{let cohorts=false;for(const form of forms){if(form.dataset.workshopForm==='cohort'){cohorts=true;try{const d=new FormData(form),id=form.dataset.id,saved=await api('/api/master/workshop/cohorts'+(id?'/'+id:''),{method:id?'PATCH':'POST',body:{name:d.get('name'),members:d.getAll('members'),...(id?{version:Number(form.dataset.version)}:{})}});form.dataset.id=saved.id;form.dataset.version=String(saved.version);}catch(e){e.officeForm=form;form.querySelector('.form-error').textContent=e.message;throw e;}}else await submit(form,true);}return cohorts?base:base+'/midias/'+current.id;}};
 }

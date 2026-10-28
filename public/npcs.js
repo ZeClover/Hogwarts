@@ -63,7 +63,7 @@ export function createNPCOffice({api,esc,ico,label,empty,button,state,render,nav
     if(state.page.startsWith(base))return editor();
     return `${label('PESSOAS CONHECIDAS')}<h1 class="display">${esc(current.name)}</h1>${personView(current)}${button('Pessoas conhecidas',publicBase,'user')}`;
   }
-  async function submit(form,submitter){
+  async function submit(form,submitter,unified=false){
     if(state.busy)return;state.busy=true;const data=new FormData(form),kind=form.dataset.npcForm,err=form.querySelector('.form-error'),submit=submitter??form.querySelector('button[type="submit"]');
     if(err)err.textContent='';if(submit)submit.disabled=true;
     try{
@@ -73,23 +73,25 @@ export function createNPCOffice({api,esc,ico,label,empty,button,state,render,nav
         const value=await api(`/api/master/workshop/npcs/${current.id}/preview?character=${encodeURIComponent(data.get('previewCharacter'))}&source=${data.get('previewSource')}`);
         document.querySelector('#npc-preview-result').innerHTML=value.accessible?personView(value.npc,true):empty('Esta pessoa não está disponível para o personagem selecionado.');return;
       }
-      let saved;
+      const editingId=current?.id,editingVersion=current?.version,sourcePage=state.page;let saved;
       if(kind==='profile'){
         let portraitFileId=data.get('portraitFileId')||null;const upload=data.get('upload'),asset=data.get('asset');
         if(upload?.size){if(upload.size>2*1024*1024)throw new Error('Use um retrato de até 2 MB.');portraitFileId=(await api('/api/master/workshop/files',{method:'POST',body:upload,raw:true})).id;}
         else if(asset)portraitFileId=(await api('/api/master/workshop/files',{method:'POST',body:{asset}})).id;
         const payload={name:data.get('name'),description:data.get('description'),role:data.get('role'),houseId:data.get('houseId')||null,locationId:data.get('primaryLocation')||null,relatedLocations:data.getAll('relatedLocations'),portraitFileId,portraitAlt:data.get('portraitAlt')};
-        saved=await api('/api/master/workshop/npcs'+(current?'/'+current.id:''),{method:current?'PATCH':'POST',body:{...(current?{version:current.version}:{}),payload,policy:readPolicy(data),privateNotes:data.get('privateNotes')}});
+        if(state.page!==sourcePage)throw new Error('A página mudou durante o salvamento.');
+        saved=await api('/api/master/workshop/npcs'+(editingId?'/'+editingId:''),{method:editingId?'PATCH':'POST',body:{...(editingId?{version:editingVersion}:{}),payload,policy:readPolicy(data),privateNotes:data.get('privateNotes')}});
       }else if(kind==='fragment'){
         saved=await api(`/api/master/workshop/npcs/${current.id}/fragments`,{method:'POST',body:{version:current.version,fragmentId:form.dataset.id||null,title:data.get('title'),text:data.get('text'),policy:readPolicy(data)}});
       }else if(kind==='reveal'){
         if(state.dirty)throw new Error('Salve as alterações antes desta ação.');
         saved=await api(`/api/master/workshop/npcs/${current.id}/${submitter.value}`,{method:'POST',body:{version:current.version,fragmentId:form.dataset.id,characters:data.getAll('recipients')}});
       }
+      if(unified){if(state.page!==sourcePage)return saved;if(kind==='fragment'&&!form.dataset.id)form.dataset.id=saved.payload.fragments.find(f=>!current.payload.fragments.some(old=>old.id===f.id))?.id??'';current=saved;dirtyForms.delete(form);return saved;}
       dirtyForms.delete(form);
       if(dirtyForms.size){current=saved;state.dirty=true;form.querySelector('fieldset').disabled=true;toast('Formulário salvo. Conclua os outros formulários em edição para atualizar a página.');return;}
       state.dirty=false;await navigate(base+'/'+saved.id,true);toast(kind==='reveal'?'Ação de conhecimento registrada.':'Rascunho salvo. Publique para atualizar o perfil disponível.');
-    }catch(e){if(err){err.textContent=e.message;err.focus();}else toast(e.message,true);}
+    }catch(e){if(err){err.textContent=e.message;err.focus();}else toast(e.message,true);if(unified){e.officeForm=form;throw e;}}
     finally{state.busy=false;if(submit)submit.disabled=false;}
   }
   function attach(root){
@@ -136,5 +138,5 @@ export function createNPCOffice({api,esc,ico,label,empty,button,state,render,nav
     if(state.page===base||state.page===publicBase){const next=await api(`${state.page===base?'/api/master/workshop/npcs':'/api/workshop/npcs'}?${query()}`);if(JSON.stringify(next)!==JSON.stringify(list)){list=next;render();}}
     else if(state.page.startsWith(publicBase+'/')){try{const next=await api('/api/workshop/npcs/'+state.page.split('/').pop());if(JSON.stringify(next)!==JSON.stringify(current)){current=next;error=null;render();}}catch(e){if(error!==e.message){error=e.message;render();}}}
   }
-  return {handles,load,page,attach,poll};
+  return {handles,load,page,attach,poll,savedRecord:()=>current,saveDrafts:async(_root,forms)=>{for(const form of forms)await submit(form,null,true);return base+'/'+current.id;}};
 }
