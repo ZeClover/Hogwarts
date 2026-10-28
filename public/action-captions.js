@@ -64,6 +64,8 @@ function contentCaption(button,state){
 }
 function description(button,state){
  const d=button.dataset;
+ if(button.closest('.quest-tabbed-editor')&&d.campaignAction==='definition-edit')return d.kind==='pistas'?'Edite aqui e use Salvar no topo. Publique a missão para atualizar as pistas do grupo.':'Edite aqui e use Salvar no topo. O estado dos participantes é atualizado separadamente.';
+ if(button.closest('.quest-tabbed-editor')&&d.campaignAction==='ask-publish')return 'Publica a revisão salva. As pistas acompanham o acesso à missão.';
  if(d.contentAction){const text=contentCaption(button,state);if(text)return text;}
  if(d.caseAction==='hide')return button.textContent.includes('Restaurar')?'Torna esta contribuição visível novamente aos participantes.':'Oculta esta contribuição por moderação, sem apagar o registro.';
  for(const [attribute,map] of Object.entries(actions))if(d[attribute]&&map[d[attribute]])return map[d[attribute]];

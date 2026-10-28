@@ -1,3 +1,4 @@
+import {createQuestCertificates} from '/quest-certificates.js';
 import {createQuestRewards} from '/quest-rewards.js';
 import {magicPaths,magicIcon,routeIcon} from '/magic-icons.js';
 import {createImageGallery} from '/image-gallery.js';
@@ -6,7 +7,7 @@ import {createCreations} from '/creations.js';
 import {attachImageFallback,enhanceExperience,organizeItemFields} from '/experience.js';
 import {attachActionCaptions} from '/action-captions.js';
 import {enhanceOfficeHelp} from '/office-help.js';
-import {attachEditorTabs,enhanceQuestEditor} from '/editor-tabs.js';
+import {attachEditorTabs,enhanceQuestEditor,attachQuestSave} from '/editor-tabs.js';
 import {attachQuickCreate} from '/quick-create.js';
 import {primarySections,playerSection,createPlayerPages} from '/player-navigation.js';
 import { createWorkshop } from '/workshop.js';
@@ -92,6 +93,9 @@ investigationsOffice.attach(root);
 const archivesOffice=createArchivesOffice({api,esc,label,empty,button,state,render,toast});
 archivesOffice.attach(root);
 const questRewards=createQuestRewards({api,state,esc,toast});
+const questCertificates=createQuestCertificates({api,state,esc,toast});
+attachQuestSave(root,{state,toast,campaignOffice,questRewards,questCertificates});
+root.addEventListener('quest-editor-enhance',()=>imageGallery.enhance(root));
 const imageGallery=createImageGallery({api,state,esc,toast});
 const delivery=createDelivery({api,state,refresh,navigate,esc});
 function toast(message, error=false) {
@@ -152,7 +156,7 @@ async function refresh(force=false) {
   const next=await api('/api/state');
   const changed=JSON.stringify(next)!==JSON.stringify(state.portal);
   state.portal=next;
-  if(state.rewardDirty||state.objectiveDirty)return;
+  if(state.questSaving||state.rewardDirty||state.objectiveDirty||state.clueDirty||state.certificateDirty)return;
   if(!force&&!changed&&creations.handles(state.page))return;
   if(!force&&!changed&&!state.dirty&&archivesOffice.handles(state.page)){return;}
   if(!force&&!changed&&!state.dirty&&investigationsOffice.handles(state.page)){await investigationsOffice.poll();return;}
@@ -287,7 +291,7 @@ function journeyTrail(){
 function render() {
   delivery.sync();
   campaignOffice.sync();
-  if(!state.session){questRewards.mount(root);document.documentElement.dataset.house='master';root.innerHTML=authPage();return;}
+  if(!state.session){questRewards.mount(root);questCertificates.mount(root);document.documentElement.dataset.house='master';root.innerHTML=authPage();return;}
   if(!state.portal)return;
   document.documentElement.dataset.house=state.portal.character?.house??'master';
   document.title=`${state.page==='/portal/mestre'?'Central do Mestre':'Hogwarts 1890'} · Arquivos Mágicos`;
@@ -298,6 +302,7 @@ function render() {
   enhanceOfficeHelp(root,state,esc);
   enhanceQuestEditor(root,state);
   questRewards.mount(root);
+  questCertificates.mount(root);
   enhanceSimplicity(root,state,{api,button,esc});
 }
 async function preview(id) {
@@ -324,7 +329,7 @@ root.addEventListener('click',async event=>{
     }
   } catch(error){toast(error.message,true);}
 });
-root.addEventListener('input',event=>{if(event.target.closest('[data-quest-rewards],[data-campaign-form="inline-objective"]'))return;if(!event.target.closest('[data-workshop-form="office-search"],[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
+root.addEventListener('input',event=>{if(event.target.closest('[data-quest-rewards],[data-quest-certificates],[data-campaign-form="inline-objective"],[data-campaign-form="inline-clue"]'))return;if(!event.target.closest('[data-workshop-form="office-search"],[data-content-form="operation"],[data-content-form="preview"],[data-workshop-form="preview"],[data-npc-form="preview"],[data-npc-form="reveal"],[data-item-form="preview"],[data-campaign-form="preview"],[data-campaign-form="participants"],[data-campaign-form="objective-state"],[data-campaign-form="clue-reveal"],[data-campaign-form="outcome"]'))state.dirty=true;});
 root.addEventListener('change',async event=>{
   if(event.target.id==='preview-select'){
     try{await preview(event.target.value);}catch(error){toast(error.message,true);}

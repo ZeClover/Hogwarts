@@ -13,7 +13,7 @@ export function enhanceSimplicity(root,state,{api,button,esc}){
   for(const id of ['regions','locations','characters','invites','groups']){const section=root.querySelector('#'+id);if(!section)continue;const details=document.createElement('details');details.className='master-section card';const summary=document.createElement('summary');summary.textContent=section.querySelector('h2')?.textContent??id;section.before(details);details.append(summary,section);}
  }
  // History, validation and unusual operations are kept, but are not primary actions.
- if(master)for(const section of root.querySelectorAll('.editor-history')){if(section.closest('details'))continue;const d=document.createElement('details');d.className='advanced-fields';const summary=document.createElement('summary');summary.textContent='Histórico';section.before(d);d.append(summary,section);}
+ if(master)for(const section of root.querySelectorAll('.editor-history')){if(section.closest('details'))continue;const d=document.createElement('details');d.className='advanced-fields';if(section.dataset.editorPanel){d.dataset.editorPanel=section.dataset.editorPanel;d.hidden=section.hidden;}const summary=document.createElement('summary');summary.textContent='Histórico';section.before(d);d.append(summary,section);}
  // Search existing records without replacing the native select or its keyboard behavior.
  if(master)for(const select of root.querySelectorAll('select')){
   if(select.options.length<8||select.name==='previewCharacter'||select.dataset.searchable)continue;select.dataset.searchable='true';
@@ -21,7 +21,7 @@ export function enhanceSimplicity(root,state,{api,button,esc}){
   input.addEventListener('input',()=>{const q=input.value.toLocaleLowerCase('pt-BR');for(const o of select.options)o.hidden=!!q&&!o.text.toLocaleLowerCase('pt-BR').includes(q)&&!o.selected;});
  }
  const prize=root.querySelector('[data-document-form="immediate"]');if(prize){const update=()=>{const kind=prize.elements.kind.value;for(const group of prize.querySelectorAll('[data-prize]')){group.hidden=!group.dataset.prize.split(' ').includes(kind);group.querySelectorAll('input,select,textarea').forEach(el=>el.disabled=group.hidden);}};prize.elements.kind.addEventListener('change',update);update();}
- if(master)for(const select of root.querySelectorAll('select[name="templateId"],select[name="payload.templateId"]')){const link=document.createElement('a');link.href='/portal/mestre/oficinas/conteudos/templates/novo';link.dataset.go=link.getAttribute('href');link.textContent='Criar ou reutilizar modelo';link.className='btn ghost small';link.dataset.integratedTool='';select.closest('.field')?.append(link);}
+ if(master)for(const select of root.querySelectorAll('select[name="templateId"],select[name="payload.templateId"]')){if(select.closest('.quest-tabbed-editor'))continue;const link=document.createElement('a');link.href='/portal/mestre/oficinas/conteudos/templates/novo';link.dataset.go=link.getAttribute('href');link.textContent='Criar ou reutilizar modelo';link.className='btn ghost small';link.dataset.integratedTool='';select.closest('.field')?.append(link);}
  // Numeric marker inputs stay bound to their existing forms and endpoints.
  if(master){
   for(const fields of root.querySelectorAll('.coordinate-fields'))void mapControl(fields,state,api);
