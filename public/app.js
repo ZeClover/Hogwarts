@@ -392,9 +392,10 @@ async function checkAuthContext(){
   try{const response=await fetch('/api/auth/context',{credentials:'same-origin',signal:window.AbortSignal.timeout(15000)});if(!response.ok){state.authContextProblem=`O servidor de acesso está indisponível (HTTP ${response.status}). Tente novamente em instantes.`;return;}const {origin}=await response.json(),parsed=new URL(origin);if(!['http:','https:'].includes(parsed.protocol)||parsed.origin!==origin)throw new Error('invalid-context');state.authOrigin=origin;state.authContextProblem=null;}
   catch(e){state.authContextProblem=e.name==='TimeoutError'?'O servidor demorou a responder à verificação de acesso. Tente novamente em instantes.':'Não foi possível conectar ao servidor para verificar o acesso. Tente novamente em instantes.';}
 }
-root.addEventListener('click',async e=>{const button=e.target.closest('[data-auth-retry]');if(!button)return;button.disabled=true;button.textContent='Verificando…';await boot();});
+root.addEventListener('click',async e=>{const button=e.target.closest('[data-auth-retry]');if(!button)return;button.disabled=true;button.textContent='Verificando…';try{await boot();}finally{if(button.isConnected){button.disabled=false;button.textContent='Tentar novamente';}}});
 async function boot() {
   await checkAuthContext();
+  if(!state.authOrigin){state.session=null;state.portal=null;render();return;}
   try{
     state.session=await api('/api/session',{preview:false});
     state.portal=await api('/api/state');

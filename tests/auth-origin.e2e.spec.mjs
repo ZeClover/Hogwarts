@@ -20,3 +20,10 @@ test('falha HTTP identifica indisponibilidade e repetir recupera o formulário s
   let unavailable=true;await page.route('**/api/auth/context',route=>unavailable?route.fulfill({status:503,contentType:'text/html',body:'Service unavailable'}):route.continue());const invitation='b'.repeat(64);await page.goto(f.config.origin+'/ativar#convite='+invitation);await expect(page.getByRole('status').filter({hasText:'HTTP 503'})).toBeVisible();await expect(page.locator('input[type=password]')).toHaveCount(0);unavailable=false;await page.getByRole('button',{name:'Tentar novamente',exact:true}).click();await expect(page.getByLabel('Crie uma senha',{exact:true})).toBeVisible();expect(new URL(page.url()).hash).toBe('#convite='+invitation);
  }finally{await f.close();}
 });
+
+test('repetir após HTTP 500 volta ao botão sem consultar uma sessão de servidor indisponível',async({page})=>{
+ const f=await fixture();try{
+  let sessionReads=0,checks=0;await page.route('**/api/auth/context',route=>{checks++;return route.fulfill({status:500,contentType:'text/html',body:'Internal Server Error'});});await page.route('**/api/session',route=>{sessionReads++;return route.abort();});await page.goto(f.config.origin+'/entrar');
+  await expect(page.getByRole('status').filter({hasText:'HTTP 500'})).toBeVisible();await page.getByRole('button',{name:'Tentar novamente',exact:true}).click();await expect(page.getByRole('button',{name:'Tentar novamente',exact:true})).toBeEnabled();expect(checks).toBe(2);expect(sessionReads).toBe(0);await expect(page.locator('input[type=password]')).toHaveCount(0);
+ }finally{await f.close();}
+});

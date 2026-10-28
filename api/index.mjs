@@ -1,4 +1,3 @@
-import { createHostedApplication } from '../dist/hosted.js';
+import { createHostedHandler } from '../dist/hosted-handler.js';
 
-const application=await createHostedApplication();
-export default application.server;
+export default createHostedHandler();

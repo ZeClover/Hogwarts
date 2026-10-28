@@ -37,7 +37,15 @@ Para Preview, use **outro banco**, credenciais Blob separadas e outro prefixo/ch
 
 ## Preparação e deploy
 
-Use Node 24.x, diretório raiz `./`, preset Other, instalação `npm ci --include=dev` e build `npm run build`. Não configure `dist` como diretório estático de saída. O `vercel.json` publica `api/index.mjs`, inclui os módulos compilados, recursos e migrations, e encaminha as rotas ao servidor. O runtime exige persistência remota e falha se faltarem configurações ou migrations; não cria SQLite no sistema efêmero da Vercel.
+Use Node 24.x, diretório raiz `./`, preset Other, instalação `npm ci --include=dev` e build `npm run build`. Não configure `dist` como diretório estático de saída. O `vercel.json` publica `api/index.mjs`, inclui os módulos compilados, recursos e migrations, e encaminha as rotas ao servidor. Essa entrada exporta uma função `(req, res)` que aguarda o listener HTTP existente. O runtime exige persistência remota e falha se faltarem configurações ou migrations; não cria SQLite no sistema efêmero da Vercel.
+
+### Correção da entrada da API — 28/10/2026
+
+A entrada anterior exportava um objeto `http.Server` sem chamar `listen()`. Esse formato não é reconhecido pelo carregador do runtime: ele aceita uma função, handlers Web ou um servidor capturado pela chamada a `listen()`. A recusa foi reproduzida com o carregador do pacote oficial `@vercel/node@28.0.0`, obtido do npm. A entrada corrigida foi reconhecida pelo mesmo carregador. Não foi adicionada uma dependência ao projeto.
+
+A inicialização ocorre na primeira requisição e é compartilhada pelas requisições concorrentes do worker. Se falhar, responde HTTP 503 com `no-store` e permite outra tentativa, sem manter uma promessa rejeitada. A resposta e o log não incluem mensagens dos SDKs, URLs de conexão ou segredos. A tela interrompe o carregamento quando `/api/auth/context` falha, permitindo repetir sem ficar esperando também a consulta de sessão.
+
+Build, lint, 215 testes de servidor e seis cenários de navegador passaram. Os testes exercitam a entrada exportada, login, cookies, origem, recuperação após falha e o botão de repetir após HTTP 500. A consulta direta ao site e aos logs da Vercel continua indisponível neste ambiente, cuja política de rede não libera o domínio; o defeito reproduzido não exclui uma falha adicional de configuração ou banco na instalação real. Se o novo deploy responder 503, confira os logs da função, as variáveis e as migrations antes de modificar dados.
 
 Em uma máquina autorizada, carregue as variáveis do ambiente desejado em `.env`, com acesso restrito ao arquivo. Primeiro faça backup do banco existente. Então execute:
 
@@ -53,7 +61,7 @@ As migrations são executadas explicitamente antes da publicação, fora de requ
 
 Para um banco libSQL **novo e vazio**, [deployment/bootstrap-empty.sql](../deployment/bootstrap-empty.sql) reúne as migrations e o mesmo seed canônico da aplicação. O arquivo não contém tokens, senhas ou convites. Ele cria a estrutura e os cinco personagens; a conta do Mestre continua exigindo um convite privado separado.
 
-Use um executor que envie o **script completo na mesma transação** e interrompa ao encontrar um erro. Confira a opção de execução de lote do console; um botão que executa apenas a instrução sob o cursor não basta. A consulta final deve retornar `migrations=20`, `casas=4` e `personagens=5` nesta versão. A proteção inicial recusa bancos que já tenham tabelas. Havendo erro, interrompa e faça rollback da transação antes de qualquer nova tentativa.
+Use um executor que envie o **script completo na mesma transação** e interrompa ao encontrar um erro. Confira a opção de execução de lote do console; um botão que executa apenas a instrução sob o cursor não basta. A consulta final deve retornar `migrations=22`, `casas=4` e `personagens=5` nesta versão. A proteção inicial recusa bancos que já tenham tabelas. Havendo erro, interrompa e faça rollback da transação antes de qualquer nova tentativa.
 
 No console **Drizzle Studio** integrado ao Turso, use [deployment/bootstrap-studio.sql](../deployment/bootstrap-studio.sql). Esse console informa que já executa múltiplas consultas em uma transação e pode recusar os comandos externos de transação do arquivo genérico. A variante Studio omite somente o controle externo de transação e o PRAGMA de conexão, preservando todas as migrations, os dois gatilhos e o seed. Execute o texto inteiro como lote na transação do console. Se houver erro de análise ou de execução, pare e confira o estado do banco antes de tentar novamente. A versão sem transação externa não deve ser usada por um executor que aplique cada comando com commit individual.
 
